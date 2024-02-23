@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using System.IO;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
+using System.Formats.Cbor;
 
 namespace TestAPILayer.Controllers
 {
@@ -39,14 +42,15 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PostTransaction()
         {
-            //string body = "";
-            //using (var reader = new StreamReader(Request.Body))
-            //{
-            //    body = await reader.ReadToEndAsync();
-            //    Console.WriteLine(body);
-            //}
+            /*
+            string body = "";
+            using (var reader = new StreamReader(Request.Body))
+            {
+                body = await reader.ReadToEndAsync();
+                Console.WriteLine(body);
+            }
             Console.WriteLine("Entered PostTransaction");
-
+            */
             if (!MultipartRequestHelper.IsMultipartContentType(Request.ContentType))
             {
                 ModelState.AddModelError("File",
@@ -87,11 +91,15 @@ namespace TestAPILayer.Controllers
                         detectEncodingFromByteOrderMarks: true,
                         leaveOpen: false))
                     {
+                        value = await streamReader.ReadToEndAsync();
+                        Console.WriteLine(value);
                        
-                        value = await streamReader.ReadToEndAsync();                      
-                       
+                        byte [] bytes = Encoding.ASCII.GetBytes(value);                        
+                        var cborReader = new CborReader(bytes, CborConformanceMode.Lax);                      
+                        Console.WriteLine(cborReader.BytesRemaining);
+                        Console.WriteLine(cborReader.ReadByteString());
                     }
-                    
+
                 }
 
                 // Drain any remaining section body that hasn't been consumed and
@@ -99,6 +107,7 @@ namespace TestAPILayer.Controllers
                 section = await reader.ReadNextSectionAsync();     
             }
             Console.WriteLine(value);
+
 
             return Ok("Success!");
         }
