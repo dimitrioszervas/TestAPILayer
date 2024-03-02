@@ -1,115 +1,116 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Net.Http.Headers;
-using System.IO;
-using System.Runtime.InteropServices.Marshalling;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using PeterO.Cbor;
 using System.Formats.Cbor;
+using Newtonsoft.Json.Linq;
 
 namespace TestAPILayer.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class TransactionsController : ControllerBase
-    {
-        private static readonly FormOptions _defaultFormOptions = new FormOptions();
+    {             
 
-        /// <summary>
-        /// Return the uploaded file enconding.
-        /// </summary>
-        /// <param name="section"></param>
-        /// <returns>Encoding</returns>
-        private Encoding GetEncoding(MultipartSection section)
+        private async Task<string> GetCBORString(string str)
         {
-            MediaTypeHeaderValue mediaType;
-            var hasMediaTypeHeader = MediaTypeHeaderValue.TryParse(section.ContentType, out mediaType);
-            // UTF-7 is insecure and should not be honored. UTF-8 will succeed in 
-            // most cases.
-         
-            if (!hasMediaTypeHeader || Encoding.UTF7.Equals(mediaType.Encoding))
-            {
-                return Encoding.UTF8;
-            }
-            return mediaType.Encoding;
-        }
 
+            return str.Replace("{", " ").Replace("}", " ").Replace("(", " ").Replace(")", " ").Replace("[", " ").
+                       Replace("]", " ").Replace('"', ' ').Replace(',', ' ').Replace("'", " ").Trim();
+
+        }
+               
         [HttpPost]
-        [Route("PostTransaction")]
+        [Route("PostTransaction")]       
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PostTransaction()
         {
-            /*
+            
+            Console.WriteLine("Entered PostTransaction");
+            
             string body = "";
             using (var reader = new StreamReader(Request.Body))
             {
                 body = await reader.ReadToEndAsync();
                 Console.WriteLine(body);
             }
-            Console.WriteLine("Entered PostTransaction");
-            */
-            if (!MultipartRequestHelper.IsMultipartContentType(Request.ContentType))
+
+            byte[] bytes = new byte[body.Length];
+            for (int i = 0; i < bytes.Length; i++)
             {
-                ModelState.AddModelError("File",
-                    $"The request couldn't be processed (Error 1).");
-                // Log error
-
-                return BadRequest(ModelState);
+                bytes[i] = (byte)body.ElementAt(i);
             }
+            //byte[] bytes = Encoding.ASCII.GetBytes(body);
 
-            string boundary = MultipartRequestHelper.GetBoundary(
-                MediaTypeHeaderValue.Parse(Request.ContentType),
-                _defaultFormOptions.MultipartBoundaryLengthLimit);
-            var reader = new MultipartReader(boundary, HttpContext.Request.Body);
-            var section = await reader.ReadNextSectionAsync();
-         
-            byte[] fileBytes = null;
-            string transactionString = null;
+            //CborReader cborReader = new CborReader(bytes);
 
-            string value = "";
-            while (section != null)
-            {               
-                var hasContentDispositionHeader =
-                    ContentDispositionHeaderValue.TryParse(
-                        section.ContentDisposition, out var contentDisposition);
-               
-                if (hasContentDispositionHeader)
-                {                 
+            //byte [] bytes2 = cborReader.ReadByteString();
 
-                    if (!ModelState.IsValid)
-                    {
-                        return BadRequest(ModelState);
-                    }
-                   
-                    var encoding = GetEncoding(section);
-                    using (var streamReader = new StreamReader(
-                        section.Body,
-                        encoding,
-                        detectEncodingFromByteOrderMarks: true,
-                        leaveOpen: false))
-                    {
-                        value = await streamReader.ReadToEndAsync();
-                        Console.WriteLine(value);
-                       
-                        byte [] bytes = Encoding.ASCII.GetBytes(value);                        
-                        var cborReader = new CborReader(bytes, CborConformanceMode.Lax);                      
-                        Console.WriteLine(cborReader.BytesRemaining);
-                        Console.WriteLine(cborReader.ReadByteString());
-                    }
+            using (MemoryStream ms = new MemoryStream(bytes))
+            {
 
-                }
+                // Read the CBOR object from the stream
+                var cbor = CBORObject.Read(ms);
+                // The rest of the example follows the one given above.
+                Console.WriteLine(cbor.ToJSONString());
 
-                // Drain any remaining section body that hasn't been consumed and
-                // read the headers for the next section.
-                section = await reader.ReadNextSectionAsync();     
-            }
-            Console.WriteLine(value);
+            }         
+
+            //            /*
+            //            int totalNShards = 21;
+            //            int parityNShards = 10;
+            //            int dataNShards = 11;
+
+            //            byte[] bytes = Encoding.Default.GetBytes(value);
 
 
-            return Ok("Success!");
+
+            //            bool [] shardsPresent = new bool [totalNShards];
+
+
+            //            for (int i = 0; i < 11; i++)
+            //            {
+            //                shardsPresent[i] = true;
+            //            }
+
+            //            Console.WriteLine(bytes.Length);
+
+            //            //// Replicate the other shards using Reeed-Solomom.
+            //            //var reedSolomon = new ReedSolomon(shardsPresent.Length - parityNShards, parityNShards);
+            //            //reedSolomon.decodeMissing(transactionShards, shardsPresent, 0, dataShardLength);
+
+            //            //// Write the Reed-Solomon matrix of shards to a 1D array of bytes
+            //            //let metadataBytes = new Uint8Array(transactionShards.length * dataShardLength);
+            //            //let offset = 0;
+
+            //            //for (let j = 0; j < transactionShards.length - parityNShards; j++)
+            //            //{
+            //            //    //Array.Copy(transactionShards[j], 0, metadataBytes, offset, dataShardLength);
+
+            //            //    for (let i = 0; i < dataShardLength; i++)
+            //            //    {
+            //            //        metadataBytes[offset + i] = transactionShards[j][i];
+            //            //    }
+
+            //            //    offset += dataShardLength;
+            //            //}
+            //          */
+            //        }
+
+
+            //    }
+
+
+            //    // Drain any remaining section body that hasn't been consumed and
+            //    // read the headers for the next section.
+            //    section = await reader.ReadNextSectionAsync();     
+            //}
+
+            //Console.WriteLine();// value);
+
+
+            return Ok(body);
         }
     }
 }
