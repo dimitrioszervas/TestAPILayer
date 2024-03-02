@@ -75,6 +75,17 @@ namespace TestAPILayer.Controllers
             return dataShards;
 
         }
+
+        private static byte [] BinaryStringToBytes(string binaryString)
+        {
+            byte[] binaryStringBytes = new byte[binaryString.Length];
+            for (int i = 0; i < binaryStringBytes.Length; i++)
+            {
+                binaryStringBytes[i] = (byte)binaryString.ElementAt(i);
+            }
+
+            return binaryStringBytes;
+        }
                
         [HttpPost]
         [Route("PostTransaction")]       
@@ -92,12 +103,8 @@ namespace TestAPILayer.Controllers
                 Console.WriteLine($"Binary String Received: {binaryString}");               
             }
 
-            byte[] binaryStringBytes = new byte[binaryString.Length];
-            for (int i = 0; i < binaryStringBytes.Length; i++)
-            {
-                binaryStringBytes[i] = (byte)binaryString.ElementAt(i);
-            }
-                     
+            byte[] binaryStringBytes = BinaryStringToBytes(binaryString);
+                                
             CBORObject binaryStringCBOR;
             using (MemoryStream ms = new MemoryStream(binaryStringBytes))
             {
