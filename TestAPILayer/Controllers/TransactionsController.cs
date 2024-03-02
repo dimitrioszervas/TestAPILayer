@@ -123,15 +123,15 @@ namespace TestAPILayer.Controllers
             int shardLength = shards[0].Length;
 
 
-            int totalNShards = shards.Length;
-            int nParityShards = totalNShards / 2;
-            int nDataShards = totalNShards - nParityShards;
+            int nTotalShards = shards.Length;
+            int nParityShards = nTotalShards / 2;
+            int nDataShards = nTotalShards - nParityShards;
 
-            Console.WriteLine($"totalNShards: {totalNShards}");
+            Console.WriteLine($"totalNShards: {nTotalShards}");
             Console.WriteLine($"parityNShards: {nParityShards}");
             Console.WriteLine($"dataNShards: {nDataShards}");
 
-            bool[] shardsPresent = new bool[totalNShards];
+            bool[] shardsPresent = new bool[nTotalShards];
 
 
             for (int i = 0; i < nDataShards; i++)
