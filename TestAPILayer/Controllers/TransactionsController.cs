@@ -15,8 +15,7 @@ namespace TestAPILayer.Controllers
             public List<string> Shards { set; get; } = new List<string>();
         }
 
-
-        public static string ConvertStringToBase64(string encoded)
+        private static string ConvertStringToBase64(string encoded)
         {
             encoded = encoded.Replace('-', '+').Replace('_', '/');
             var d = encoded.Length % 4;
@@ -29,7 +28,7 @@ namespace TestAPILayer.Controllers
             return encoded;
         }
 
-        byte[] StripPadding(byte[] paddedData)
+        private static byte[] StripPadding(byte[] paddedData)
         {
             try
             {
@@ -58,7 +57,7 @@ namespace TestAPILayer.Controllers
             }
         }
 
-        private byte[][] GetShardsFromJSON(string jsonArrayString)
+        private static byte[][] GetShardsFromJSON(string jsonArrayString)
         {        
 
             var cborShards = JsonConvert.DeserializeObject<ShardsJSON>("{'shards':" + jsonArrayString + "}");
