@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using PeterO.Cbor;
-using TestAPILayer.ReedSolomon;
+using Newtonsoft.Json;
+using System.Transactions;
 
 namespace TestAPILayer.Controllers
 {
@@ -9,6 +10,11 @@ namespace TestAPILayer.Controllers
     [ApiController]
     public class TransactionsController : ControllerBase
     {
+        sealed class ShardsJSON
+        {
+            public List<string> Shards { set; get; } = new List<string>();
+        }
+
 
         public static string ConvertStringToBase64(string encoded)
         {
@@ -52,23 +58,19 @@ namespace TestAPILayer.Controllers
             }
         }
 
-        private async Task<byte[][]> GetShards(string str)
-        {
+        private byte[][] GetShardsFromJSON(string jsonArrayString)
+        {        
 
-            str = str.Replace('[', ' ').Replace(']', ' ').Replace('"', ' ').Replace('\'', ' ');
+            var cborShards = JsonConvert.DeserializeObject<ShardsJSON>("{'shards':" + jsonArrayString + "}");
 
-            string[] shards = str.Split(',');
-
-            byte[][] dataShards = new byte[shards.Length][];
-            for (int i = 0; i < shards.Length; i++)
+            byte[][] dataShards = new byte[cborShards.Shards.Count][];
+            for (int i = 0; i < cborShards.Shards.Count; i++)
             {
-                shards[i] = ConvertStringToBase64(shards[i].Trim());
-                //Console.WriteLine(shards[i].Length);
-                //Console.WriteLine(shards[i].Trim());
-                byte[] bytes = Convert.FromBase64String(shards[i]);
-                //Console.WriteLine(Encoding.UTF8.GetString(bytes));
-                dataShards[i] = new byte [bytes.Length];
-                Array.Copy(bytes, dataShards[i], bytes.Length);
+                string shardString = ConvertStringToBase64(cborShards.Shards[i]);               
+                byte[] shardBytes = Convert.FromBase64String(shardString);
+                Console.WriteLine($"shard[{i}]: {Encoding.UTF8.GetString(shardBytes)}");
+                dataShards[i] = new byte [shardBytes.Length];
+                Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
             }
 
             return dataShards;
@@ -81,29 +83,28 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PostTransaction()
-        {
+        {          
             
-            Console.WriteLine("Entered PostTransaction");
-            
-            string body = "";
+            string binaryString = "";
             using (var reader = new StreamReader(Request.Body))
             {
-                body = await reader.ReadToEndAsync();                
-                //Console.WriteLine(body);               
+                binaryString = await reader.ReadToEndAsync();
+                Console.WriteLine("----------------------------------------------------------------------");
+                Console.WriteLine($"Binary String Received: {binaryString}");               
             }
 
-            byte[] bytes = new byte[body.Length];
-            for (int i = 0; i < bytes.Length; i++)
+            byte[] binaryStringBytes = new byte[binaryString.Length];
+            for (int i = 0; i < binaryStringBytes.Length; i++)
             {
-                bytes[i] = (byte)body.ElementAt(i);
+                binaryStringBytes[i] = (byte)binaryString.ElementAt(i);
             }
-            //byte[] bytes = Encoding.ASCII.GetBytes(body);           
-            CBORObject cbor;
-            using (MemoryStream ms = new MemoryStream(bytes))
+                     
+            CBORObject binaryStringCBOR;
+            using (MemoryStream ms = new MemoryStream(binaryStringBytes))
             {
 
                 // Read the CBOR object from the stream
-                cbor = CBORObject.Read(ms);
+                binaryStringCBOR = CBORObject.Read(ms);
                 // The rest of the example follows the one given above.
                 if (ms.Position != ms.Length)
                 {
@@ -113,23 +114,26 @@ namespace TestAPILayer.Controllers
                 else
                 {
                     // The end of the stream was reached.
-                    Console.WriteLine("The end of the stream was reached.");
-                    //Console.WriteLine(cbor.ToJSONString());
+                    //Console.WriteLine("The end of the stream was reached.");
                 }
             }
 
-            byte [][] shards = await GetShards(cbor.ToJSONString());
+            Console.WriteLine("----------------------------------------------------------------------");
+            Console.WriteLine($"Binary String CBOR to JSON: {binaryStringCBOR.ToJSONString()}");
+            Console.WriteLine("----------------------------------------------------------------------");
+            byte [][] shards = GetShardsFromJSON(binaryStringCBOR.ToJSONString());
+            Console.WriteLine("----------------------------------------------------------------------");
 
             int shardLength = shards[0].Length;
-
 
             int nTotalShards = shards.Length;
             int nParityShards = nTotalShards / 2;
             int nDataShards = nTotalShards - nParityShards;
 
             Console.WriteLine($"totalNShards: {nTotalShards}");
-            Console.WriteLine($"parityNShards: {nParityShards}");
             Console.WriteLine($"dataNShards: {nDataShards}");
+            Console.WriteLine($"parityNShards: {nParityShards}");
+            Console.WriteLine("----------------------------------------------------------------------");
 
             bool[] shardsPresent = new bool[nTotalShards];
 
@@ -137,30 +141,45 @@ namespace TestAPILayer.Controllers
             for (int i = 0; i < nDataShards; i++)
             {
                 shardsPresent[i] = true;
-            }
-
-            Console.WriteLine(bytes.Length);
+            }                       
 
             // Replicate the other shards using Reeed-Solomom.
             var reedSolomon = new ReedSolomon.ReedSolomon(shardsPresent.Length - nParityShards, nParityShards);
             reedSolomon.DecodeMissing(shards, shardsPresent, 0, shardLength);
 
             // Write the Reed-Solomon matrix of shards to a 1D array of bytes
-            byte[] buffer = new byte[shards.Length * shardLength];
+            byte[] rebuiltDataBytes = new byte[shards.Length * shardLength];
             int offSet = 0;
-
             for (int j = 0; j < shards.Length - nParityShards; j++)
             {
-                Array.Copy(shards[j], 0, buffer, offSet, shardLength);
+                Array.Copy(shards[j], 0, rebuiltDataBytes, offSet, shardLength);
                 offSet += shardLength;
-            }
+            }           
 
-            Console.WriteLine("Reassembled Output text:");
-            string output = Encoding.ASCII.GetString(StripPadding(buffer));
-            Console.WriteLine(output);
+            string rebuiltDataString = "";
+            using (MemoryStream ms = new MemoryStream(StripPadding(rebuiltDataBytes)))
+            {
+
+                // Read the CBOR object from the stream
+                CBORObject rebuiltDataCBOR = CBORObject.Read(ms);
+                // The rest of the example follows the one given above.
+                if (ms.Position != ms.Length)
+                {
+                    // The end of the stream wasn't reached yet.
+                    Console.WriteLine("The end of the stream wasn't reached yet.");
+                }
+                else
+                {
+                    // The end of the stream was reached.
+                    //Console.WriteLine("The end of the stream was reached.");
+                    rebuiltDataString = rebuiltDataCBOR.ToJSONString();
+                }
+            }
+                     
+            Console.WriteLine($"Rebuilt Data: {rebuiltDataString}");
             Console.WriteLine();
 
-            return Ok(output);
+            return Ok(rebuiltDataString);
         }
     }
 }
