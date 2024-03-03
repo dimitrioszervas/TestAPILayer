@@ -104,25 +104,8 @@ namespace TestAPILayer.Controllers
             }
 
             byte[] binaryStringBytes = BinaryStringToBytes(binaryString);
-                                
-            CBORObject binaryStringCBOR;
-            using (MemoryStream ms = new MemoryStream(binaryStringBytes))
-            {
-
-                // Read the CBOR object from the stream
-                binaryStringCBOR = CBORObject.Read(ms);
-                // The rest of the example follows the one given above.
-                if (ms.Position != ms.Length)
-                {
-                    // The end of the stream wasn't reached yet.
-                    Console.WriteLine("The end of the stream wasn't reached yet.");
-                }
-                else
-                {
-                    // The end of the stream was reached.
-                    //Console.WriteLine("The end of the stream was reached.");
-                }
-            }
+            CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(binaryStringBytes);
+           
 
             Console.WriteLine("----------------------------------------------------------------------");
             Console.WriteLine($"Binary String CBOR to JSON: {binaryStringCBOR.ToJSONString()}");
@@ -162,30 +145,13 @@ namespace TestAPILayer.Controllers
                 offSet += shardLength;
             }           
 
-            string rebuiltDataString = "";
-            using (MemoryStream ms = new MemoryStream(StripPadding(rebuiltDataBytes)))
-            {
-
-                // Read the CBOR object from the stream
-                CBORObject rebuiltDataCBOR = CBORObject.Read(ms);
-                // The rest of the example follows the one given above.
-                if (ms.Position != ms.Length)
-                {
-                    // The end of the stream wasn't reached yet.
-                    Console.WriteLine("The end of the stream wasn't reached yet.");
-                }
-                else
-                {
-                    // The end of the stream was reached.
-                    //Console.WriteLine("The end of the stream was reached.");
-                    rebuiltDataString = rebuiltDataCBOR.ToJSONString();
-                }
-            }
+            CBORObject rebuiltDataCBOR = CBORObject.DecodeFromBytes(StripPadding(rebuiltDataBytes));
+            string rebuiltDataString = rebuiltDataCBOR.ToJSONString();            
                      
             Console.WriteLine($"Rebuilt Data: {rebuiltDataString}");
             Console.WriteLine();
 
-            return Ok(rebuiltDataString);
+            return Ok(rebuiltDataCBOR.ToJSONString());
         }
     }
 }
