@@ -9,7 +9,9 @@ namespace TestAPILayer.Controllers
     [ApiController]
     public class TransactionsController : ControllerBase
     {
-        // Class that represents a JSON Array of strings used to map a JSON array of strings 
+        // Class that represents a JSON Array of strings used to map a JSON array of strings
+        // CBOR arrives as string arrays from frontend and we use this object to
+        // map the CBOR JSON arrays.
         sealed class JSONArray
         {
             public List<string> values { set; get; } = new List<string>();
