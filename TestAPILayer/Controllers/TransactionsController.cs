@@ -2,6 +2,7 @@
 using System.Text;
 using PeterO.Cbor;
 using Newtonsoft.Json;
+using System.Collections;
 
 namespace TestAPILayer.Controllers
 {
@@ -15,6 +16,17 @@ namespace TestAPILayer.Controllers
             public List<string> Shards { set; get; } = new List<string>();
         }
  
+        // Converts a byte array to a CBOR C# object using memory stream.
+        private static CBORObject BytesToCBORObject(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                // Read the CBOR object from the stream
+                var cbor = CBORObject.Read(stream);
+                return cbor;
+            }
+        } 
+
         // Converts a byte string to a Base64 string
         private static string ConvertStringToBase64(string encoded)
         {
