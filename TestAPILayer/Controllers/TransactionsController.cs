@@ -13,7 +13,7 @@ namespace TestAPILayer.Controllers
         // JSON shard object
         sealed class JSONArray
         {
-            public List<string> Shards { set; get; } = new List<string>();
+            public List<string> values { set; get; } = new List<string>();
         }
  
         // Converts a byte array to a CBOR C# object using memory stream.
@@ -91,7 +91,7 @@ namespace TestAPILayer.Controllers
         // we map the JSON array string to a C# List object.
         private static List<string> JSONArrayToList(string jsonArrayString)
         {
-            return JsonConvert.DeserializeObject<JSONArray>("{'shards':" + jsonArrayString + "}").Shards;
+            return JsonConvert.DeserializeObject<JSONArray>("{\"values\":" + jsonArrayString + "}").values;
         }
 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
