@@ -15,6 +15,7 @@ namespace TestAPILayer.Controllers
             public List<string> Shards { set; get; } = new List<string>();
         }
 
+        // Converts a byte string to a Base64 string
         private static string ConvertStringToBase64(string encoded)
         {
             encoded = encoded.Replace('-', '+').Replace('_', '/');
@@ -28,6 +29,7 @@ namespace TestAPILayer.Controllers
             return encoded;
         }
 
+        // Strips padding addded during the Reed-Solomon sharding
         private static byte[] StripPadding(byte[] paddedData)
         {
             try
@@ -57,25 +59,35 @@ namespace TestAPILayer.Controllers
             }
         }
 
+        // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
+        // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
         {        
-
+            // we map the JSON array string to a C# object.
             var cborShards = JsonConvert.DeserializeObject<ShardsJSON>("{'shards':" + jsonArrayString + "}");
 
+            // allocate memory for the data shards byte matrix  
             byte[][] dataShards = new byte[cborShards.Shards.Count][];
             for (int i = 0; i < cborShards.Shards.Count; i++)
             {
-                string shardString = ConvertStringToBase64(cborShards.Shards[i]);               
-                byte[] shardBytes = Convert.FromBase64String(shardString);
+                // convert byte string to a base64 string 
+                string shardBase64String = ConvertStringToBase64(cborShards.Shards[i]);  
+                
+                // convert base64 string to bytes
+                byte[] shardBytes = Convert.FromBase64String(shardBase64String);
+
+                // Write to console out for debug
                 Console.WriteLine($"shard[{i}]: {Encoding.UTF8.GetString(shardBytes)}");
+
+                // copy shard to shard matrix
                 dataShards[i] = new byte [shardBytes.Length];
                 Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
             }
 
             return dataShards;
-
         }
 
+        // Converts the binary string received from the request to bytes.
         private static byte [] BinaryStringToBytes(string binaryString)
         {
             byte[] binaryStringBytes = new byte[binaryString.Length];
@@ -86,7 +98,8 @@ namespace TestAPILayer.Controllers
 
             return binaryStringBytes;
         }
-               
+              
+        // Transaction endpoint
         [HttpPost]
         [Route("PostTransaction")]       
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -94,7 +107,7 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PostTransaction()
         {          
-            
+            // Get the binary string from the request 
             string binaryString = "";
             using (var reader = new StreamReader(Request.Body))
             {
@@ -103,29 +116,34 @@ namespace TestAPILayer.Controllers
                 Console.WriteLine($"Binary String Received: {binaryString}");               
             }
 
+            // Convert binary string to a byte array.  
             byte[] binaryStringBytes = BinaryStringToBytes(binaryString);
+
+            // Decode binary string's CBOR bytes  
             CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(binaryStringBytes);
            
-
             Console.WriteLine("----------------------------------------------------------------------");
             Console.WriteLine($"Binary String CBOR to JSON: {binaryStringCBOR.ToJSONString()}");
             Console.WriteLine("----------------------------------------------------------------------");
+
+            // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromJSON(binaryStringCBOR.ToJSONString());
             Console.WriteLine("----------------------------------------------------------------------");
 
+            // Get shard length (all shards are of equal length).
             int shardLength = shards[0].Length;
 
             int nTotalShards = shards.Length;
             int nParityShards = nTotalShards / 2;
             int nDataShards = nTotalShards - nParityShards;
 
-            Console.WriteLine($"totalNShards: {nTotalShards}");
-            Console.WriteLine($"dataNShards: {nDataShards}");
-            Console.WriteLine($"parityNShards: {nParityShards}");
+            Console.WriteLine($"Total number of shards: {nTotalShards}");
+            Console.WriteLine($"Number of data shards: {nDataShards}");
+            Console.WriteLine($"Number of parity shards: {nParityShards}");
             Console.WriteLine("----------------------------------------------------------------------");
 
+            // Set which shards are present - you have to have a minimum number = number of data shards
             bool[] shardsPresent = new bool[nTotalShards];
-
 
             for (int i = 0; i < nDataShards; i++)
             {
@@ -145,9 +163,11 @@ namespace TestAPILayer.Controllers
                 offSet += shardLength;
             }           
 
+            // Decode rebuilt CBOR data bytes, after stripping the padding needed for the Reed-Solomon
+            // which requires that all shards have to be equal in length. 
             CBORObject rebuiltDataCBOR = CBORObject.DecodeFromBytes(StripPadding(rebuiltDataBytes));
-            string rebuiltDataString = rebuiltDataCBOR.ToJSONString();            
-                     
+            string rebuiltDataString = rebuiltDataCBOR.ToJSONString();
+                                 
             Console.WriteLine($"Rebuilt Data: {rebuiltDataString}");
             Console.WriteLine();
 
