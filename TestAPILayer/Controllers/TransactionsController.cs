@@ -11,7 +11,7 @@ namespace TestAPILayer.Controllers
     public class TransactionsController : ControllerBase
     {
         // JSON shard object
-        sealed class ShardsJSON
+        sealed class JSONArray
         {
             public List<string> Shards { set; get; } = new List<string>();
         }
@@ -88,19 +88,25 @@ namespace TestAPILayer.Controllers
             return bytes;
         }
 
+        // we map the JSON array string to a C# List object.
+        private static List<string> JSONArrayToList(string jsonArrayString)
+        {
+            return JsonConvert.DeserializeObject<JSONArray>("{'shards':" + jsonArrayString + "}").Shards;
+        }
+
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
         {        
             // we map the JSON array string to a C# object.
-            var cborShards = JsonConvert.DeserializeObject<ShardsJSON>("{'shards':" + jsonArrayString + "}");
+            var stringShards = JSONArrayToList(jsonArrayString);
 
             // allocate memory for the data shards byte matrix  
-            byte[][] dataShards = new byte[cborShards.Shards.Count][];
-            for (int i = 0; i < cborShards.Shards.Count; i++)
+            byte[][] dataShards = new byte[stringShards.Count][];
+            for (int i = 0; i < stringShards.Count; i++)
             {
                 // convert byte string to a base64 string 
-                string shardBase64String = ConvertStringToBase64(cborShards.Shards[i]);  
+                string shardBase64String = ConvertStringToBase64(stringShards[i]);  
                 
                 // convert base64 string to bytes
                 byte[] shardBytes = Convert.FromBase64String(shardBase64String);
@@ -161,7 +167,7 @@ namespace TestAPILayer.Controllers
             //CBORObject transCBOR = CBORObject.DecodeFromBytes(transactionBytes);
            
             //Console.WriteLine(transCBOR.ToJSONString());
-
+           
            
             // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromJSON(binaryStringCBOR.ToJSONString());
@@ -209,7 +215,7 @@ namespace TestAPILayer.Controllers
             Console.WriteLine();
 
             return Ok(rebuiltDataCBOR.ToJSONString());
-           
+            
             //return Ok("Hello from API Layer");
         }
     }
