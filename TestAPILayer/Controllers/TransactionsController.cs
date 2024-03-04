@@ -93,14 +93,16 @@ namespace TestAPILayer.Controllers
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
         {        
             // we map the JSON array string to a C# object.
-            var stringShards = JSONArrayToList(jsonArrayString);
+            var stringArray = JSONArrayToList(jsonArrayString);
 
-            // allocate memory for the data shards byte matrix  
-            byte[][] dataShards = new byte[stringShards.Count][];
-            for (int i = 0; i < stringShards.Count; i++)
+            // allocate memory for the data shards byte matrix
+            // Last element in the string array is not a shard but the SRC array 
+            int totalShardNumber = stringArray.Count - 1;
+            byte[][] dataShards = new byte[totalShardNumber][];
+            for (int i = 0; i < totalShardNumber; i++)
             {
                 // convert string to bytes
-                byte[] shardBytes = StringToBytes(stringShards[i]);
+                byte[] shardBytes = StringToBytes(stringArray[i]);
 
                 // Write to console out for debug
                 Console.WriteLine($"shard[{i}]: {Encoding.UTF8.GetString(shardBytes)}");
