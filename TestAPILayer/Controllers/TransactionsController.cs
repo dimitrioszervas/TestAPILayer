@@ -91,15 +91,20 @@ namespace TestAPILayer.Controllers
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
-        {        
+        {
+            Console.WriteLine();
             // we map the JSON array string to a C# object.
             var stringArray = JSONArrayToList(jsonArrayString);
+            
+            byte [] src = StringToBytes(stringArray[stringArray.Count - 1]);
+            Console.WriteLine($"SRC: {Encoding.UTF8.GetString(src)}");
+            Console.WriteLine();
 
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
-            int totalShardNumber = stringArray.Count - 1;
-            byte[][] dataShards = new byte[totalShardNumber][];
-            for (int i = 0; i < totalShardNumber; i++)
+            int numShards = stringArray.Count - 1;
+            byte[][] dataShards = new byte[numShards][];
+            for (int i = 0; i < numShards; i++)
             {
                 // convert string to bytes
                 byte[] shardBytes = StringToBytes(stringArray[i]);
@@ -111,6 +116,8 @@ namespace TestAPILayer.Controllers
                 dataShards[i] = new byte [shardBytes.Length];
                 Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
             }
+
+            Console.WriteLine();
 
             return dataShards;
         }
