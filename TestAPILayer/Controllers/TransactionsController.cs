@@ -2,6 +2,7 @@
 using System.Text;
 using PeterO.Cbor;
 using Newtonsoft.Json;
+using System.Security.Cryptography;
 
 namespace TestAPILayer.Controllers
 {
@@ -86,6 +87,43 @@ namespace TestAPILayer.Controllers
 
             // convert base64 string to bytes
             return Convert.FromBase64String(base64String);
+        }
+
+        public static byte[] AESDecrypt(byte[] encryptedBytes, byte[] aesKey)
+        {
+
+            byte[] decryptedBytes;
+            // Create an Aes object
+            // with the specified aesKey and IV.
+            using (Aes aes = Aes.Create())
+            {
+
+                try
+                {
+                    aes.Key = aesKey;
+                    aes.IV = new byte[16];
+
+                    // Create an decryptor to perform the stream transform.
+                    ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+
+                    // Create the streams used for decryption.
+                    using (MemoryStream msDecrypt = new MemoryStream(encryptedBytes))
+                    {
+                        using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                        {
+                            decryptedBytes = new byte[encryptedBytes.Length];
+                            csDecrypt.Read(decryptedBytes, 0, decryptedBytes.Length);
+                        }
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"{ex.Message} aesKey size: {aesKey.Length}");
+                }
+            }
+
+            return decryptedBytes;
         }
 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
