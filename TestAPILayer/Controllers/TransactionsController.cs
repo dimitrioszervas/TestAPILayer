@@ -3,32 +3,20 @@ using System.Text;
 using PeterO.Cbor;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
+using System.Security;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+
 
 
 namespace TestAPILayer.Controllers
 {
+    
+
     [Route("api/[controller]")]
     [ApiController]
     public class TransactionsController : ControllerBase
     {
-        private enum KeyType {
-            SIGN,
-            ENCRYPT
-        }
-
-        private const string SECRET_STRING = "SECRET";
-        private const string ENCRYPT_STRING = "ENCRYPT";
-        private const string SIGN_STRING = "SIGN";
-        private const string ENCRYPTS_STRING = "ENCRYPTS";
-        private const string SIGNS_STRING = "SIGNS";
-
-        private static byte[] SECRET;
-        private static byte[] SRC;
-        private static byte[] ENCRYPT;
-        private static byte[] SIGN;
-
-        private static List<byte[]> ENCRYPTS;
-        private static List<byte[]> SIGNS;
+            
 
         // Class that represents a JSON Array of strings used to map a JSON array of strings
         // CBOR arrives as string arrays from frontend and we use this object to
@@ -50,52 +38,7 @@ namespace TestAPILayer.Controllers
             }
         } 
 
-        private static List<byte []> GenerateNKeys(int n, byte [] SRC, KeyType type, byte [] baseKey)
-        {
-            List<byte[]> keys = new List<byte[]>();
-            byte[] salt, info;
-
-            if (type == KeyType.SIGN)
-            {
-                salt = SRC; // salt needed to generate keys
-                info = Encoding.UTF8.GetBytes(SIGNS_STRING + n);
-            }
-            else
-            {
-               
-                salt = SRC; // salt needed to generate keys
-                info = Encoding.UTF8.GetBytes(ENCRYPTS_STRING + n);                
-            }
-
-            for (int i = 0; i < n; i++)
-            {              
-                byte[] key = HKDF.DeriveKey(HashAlgorithmName.SHA256, baseKey, 32, salt, info);
-                keys.Add(key);
-            }
-
-            return keys;
-        }
-
-        // Genarates keys in the same way as the JavaScript
-        // protocol.js module but the key that are generated
-        // are not matching the JavaScript version
-        private static void GenerateKeys(int n)
-        {
-            byte[] secretBytes = Encoding.UTF8.GetBytes(SECRET_STRING);
-            //SECRET = HKDF.Extract(HashAlgorithmName.SHA256, secretBytes);
-            SECRET = HKDF.DeriveKey(HashAlgorithmName.SHA256, secretBytes, secretBytes.Length);
-            Console.WriteLine(SECRET.Length);
-            SRC = HKDF.DeriveKey(HashAlgorithmName.SHA256, SECRET, 8, null, null);
-            Console.WriteLine(SRC.Length);
-            Console.WriteLine($"API Layer's SRC: {Encoding.UTF8.GetString(SRC)}");
-            ENCRYPT = HKDF.DeriveKey(HashAlgorithmName.SHA256, SECRET, 32, SRC, Encoding.UTF8.GetBytes(ENCRYPT_STRING));
-            //ENCRYPT = HKDF.DeriveKey(HashAlgorithmName.SHA256, ENCRYPT, 32, SRC, Encoding.UTF8.GetBytes(ENCRYPT_STRING));
-            SIGN = HKDF.DeriveKey(HashAlgorithmName.SHA256, SECRET, 32, SRC, Encoding.UTF8.GetBytes(SIGN_STRING));
-
-            ENCRYPTS = GenerateNKeys(n, SRC, KeyType.ENCRYPT, ENCRYPT);
-            SIGNS = GenerateNKeys(n, SRC, KeyType.SIGN, SIGN);
-        }
-
+ 
         // Converts a byte string to a Base64 string
         private static string ConvertStringToBase64(string encoded)
         {
@@ -155,42 +98,25 @@ namespace TestAPILayer.Controllers
             return Convert.FromBase64String(base64String);
         }
 
-        public static byte[] AESDecrypt(byte[] encryptedBytes, byte[] aesKey, byte[] iv)
+        public static byte [] Decrypt(byte[] cipherBytes, byte[] key, byte[] src)
         {
-
-            byte[] decryptedBytes;
-            // Create an Aes object
-            // with the specified aesKey and IV.
-            using (Aes aes = Aes.Create())
+            byte[] decrytedBytes = null;
+            try
             {
-
-                try
-                {
-                    aes.Key = aesKey;
-                    aes.IV = new byte[16];
-                    Array.Copy(iv, aes.IV, iv.Length);
-
-                    // Create an decryptor to perform the stream transform.
-                    ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-
-                    // Create the streams used for decryption.
-                    using (MemoryStream msDecrypt = new MemoryStream(encryptedBytes))
-                    {
-                        using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
-                        {
-                            decryptedBytes = new byte[encryptedBytes.Length];
-                            csDecrypt.Read(decryptedBytes, 0, decryptedBytes.Length);
-                        }
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"{ex.Message} aesKey size: {aesKey.Length}");
-                }
+                var aes = new AesGcm(key);
+                byte[] iv = src;
+                Array.Copy(src, iv, src.Length);
+                byte[] tag = new byte[16];
+                byte[] plainBytes = new byte [cipherBytes.Length];
+                aes.Decrypt(iv, cipherBytes, tag, plainBytes);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);              
             }
 
-            return decryptedBytes;
+            return decrytedBytes;            
         }
 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
@@ -200,25 +126,46 @@ namespace TestAPILayer.Controllers
             Console.WriteLine();
             // we map the JSON array string to a C# object.
             var stringArray = JSONArrayToList(jsonArrayString);
-            
-            byte [] src = StringToBytes(stringArray[stringArray.Count - 1]);
-            Console.WriteLine($"Received SRC from test-ui: {Encoding.UTF8.GetString(src)}");
-            Console.WriteLine();
 
+            byte[] srcReceived = StringToBytes(stringArray[stringArray.Count - 1]);
+            Console.WriteLine($"Received SRC from test-ui: {KeyDerivation.ByteArrayToString(srcReceived)}");
+            Console.WriteLine();
+            //
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
             int numShards = stringArray.Count - 1;
-            GenerateKeys(numShards);
-            
+            List<byte[]> encrypts = new List<byte[]>();
+            List<byte[]> signs = new List<byte[]>();
+            byte[] src = new byte[8];
+            string secretString = "secret";
+            int n = 3;
+            KeyDerivation.GenerateKeys(ref encrypts, ref signs, ref src, secretString, n);
+
+
+            Console.WriteLine("encrypts:");
+            for (int i = 0; i < encrypts.Count; i++)
+            {
+                Console.WriteLine($"encryts[{i}] Key: {KeyDerivation.ByteArrayToString(encrypts[i])}");
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("signs:");
+            for (int i = 0; i < signs.Count; i++)
+            {
+                Console.WriteLine($"signs[{i}] Key: {KeyDerivation.ByteArrayToString(signs[i])}");
+                Console.WriteLine();
+            }
+
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
                 // convert string to bytes
                 byte[] encryptedShardBytes = StringToBytes(stringArray[i]);
-                byte[] shardBytes = AESDecrypt(encryptedShardBytes, ENCRYPTS[i], SRC);
+                
+                byte[] shardBytes = Decrypt(encryptedShardBytes, encrypts[i+1], src);               
 
                 // Write to console out for debug
-                Console.WriteLine($"shard[{i}]: {Encoding.UTF8.GetString(shardBytes)}");
+                Console.WriteLine($"shard[{i}]: {KeyDerivation.ByteArrayToString(shardBytes)}");
 
                 // copy shard to shard matrix
                 dataShards[i] = new byte [shardBytes.Length];
@@ -333,8 +280,6 @@ namespace TestAPILayer.Controllers
 
             return Ok(rebuiltDataCBOR.ToJSONString());
          
-
-            return Ok("API Layer Rsponded!");
         }
     }
 }
