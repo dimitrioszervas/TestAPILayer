@@ -97,18 +97,21 @@ namespace TestAPILayer.Controllers
             // convert base64 string to bytes
             return Convert.FromBase64String(base64String);
         }
+             
 
-        public static byte [] Decrypt(byte[] cipherBytes, byte[] key, byte[] src)
+        public static byte [] Decrypt(byte[] encryptedData, byte[] key, byte[] src)
         {
-            byte[] decrytedBytes = null;
+            var ciphertext = encryptedData[0..^16];
+            var tag = encryptedData[^16..];
+            byte[] decrytedBytes = new byte [ciphertext.Length];
             try
             {
                 var aes = new AesGcm(key);
-                byte[] iv = src;
-                Array.Copy(src, iv, src.Length);
-                byte[] tag = new byte[16];
-                byte[] plainBytes = new byte [cipherBytes.Length];
-                aes.Decrypt(iv, cipherBytes, tag, plainBytes);
+
+                byte[] iv = new byte[12];
+                Array.Copy(src, iv, 8);              
+                
+                aes.Decrypt(iv, ciphertext, tag, decrytedBytes);
             }
             catch (Exception ex)
             {
@@ -118,7 +121,18 @@ namespace TestAPILayer.Controllers
 
             return decrytedBytes;            
         }
-
+       
+        /*
+        public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte [] src)
+        {
+            var ciphertext = encryptedData[0..^16];
+            var tag = encryptedData[^16..];
+            using var aes = new AesGcm(key);
+            var plaintext = new byte[ciphertext.Length];
+            aes.Decrypt(src, ciphertext, tag, plaintext);
+            return plaintext;
+        }
+        */
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
