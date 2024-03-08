@@ -97,7 +97,39 @@ namespace TestAPILayer.Controllers
             // convert base64 string to bytes
             return Convert.FromBase64String(base64String);
         }
-             
+
+        private static byte [] Decrypt(string base64Ciphertext, byte[] key, byte [] src)
+        {
+
+            // convert from base64 to raw bytes spans
+            var encryptedData = Convert.FromBase64String(base64Ciphertext).AsSpan();            
+
+            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 bytes
+            //var ivSizeBytes = 12; // 12 bytes iv
+
+            // ciphertext size is whole data - iv - tag
+            var cipherSize = encryptedData.Length - tagSizeBytes;// - ivSizeBytes;
+
+            // extract iv (nonce) 12 bytes prefix
+            //var iv = encryptedData.Slice(0, ivSizeBytes);
+            byte[] iv = new byte[12];
+            Array.Copy(src, iv, 8);
+
+            // followed by the real ciphertext
+            var cipherBytes = encryptedData.Slice(0, cipherSize);
+
+            // followed by the tag (trailer)
+            var tagStart = cipherSize;
+            var tag = encryptedData.Slice(tagStart);
+
+            // now that we have all the parts, the decryption
+            Span<byte> plainBytes = cipherSize < 1024
+                ? stackalloc byte[cipherSize]
+                : new byte[cipherSize];
+            using var aes = new AesGcm(key);
+            aes.Decrypt(iv, cipherBytes, tag, plainBytes);
+            return plainBytes.ToArray();
+        }
 
         public static byte [] Decrypt(byte[] encryptedData, byte[] key, byte[] src)
         {
@@ -176,7 +208,7 @@ namespace TestAPILayer.Controllers
                 // convert string to bytes
                 byte[] encryptedShardBytes = StringToBytes(stringArray[i]);
                 
-                byte[] shardBytes = Decrypt(encryptedShardBytes, encrypts[i+1], src);               
+                byte[] shardBytes = Decrypt(ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
 
                 // Write to console out for debug
                 Console.WriteLine($"shard[{i}]: {KeyDerivation.ByteArrayToString(shardBytes)}");
