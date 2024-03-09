@@ -138,9 +138,7 @@ namespace TestAPILayer.Controllers
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
-                // convert string to bytes
-                byte[] encryptedShardBytes = StringToBytes(stringArray[i]);
-                
+                // decrypt string array                
                 byte[] shardBytes = CryptoUtils.Decrypt(ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
 
                 // Write to console out for debug
