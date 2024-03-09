@@ -98,73 +98,6 @@ namespace TestAPILayer.Controllers
             return Convert.FromBase64String(base64String);
         }
 
-        private static byte [] Decrypt(string base64Ciphertext, byte[] key, byte [] src)
-        {
-
-            // convert from base64 to raw bytes spans
-            var encryptedData = Convert.FromBase64String(base64Ciphertext).AsSpan();            
-
-            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 bytes
-            //var ivSizeBytes = 12; // 12 bytes iv
-
-            // ciphertext size is whole data - iv - tag
-            var cipherSize = encryptedData.Length - tagSizeBytes;// - ivSizeBytes;
-
-            // extract iv (nonce) 12 bytes prefix
-            //var iv = encryptedData.Slice(0, ivSizeBytes);
-            byte[] iv = new byte[12];
-            Array.Copy(src, iv, 8);
-
-            // followed by the real ciphertext
-            var cipherBytes = encryptedData.Slice(0, cipherSize);
-
-            // followed by the tag (trailer)
-            var tagStart = cipherSize;
-            var tag = encryptedData.Slice(tagStart);
-
-            // now that we have all the parts, the decryption
-            Span<byte> plainBytes = cipherSize < 1024
-                ? stackalloc byte[cipherSize]
-                : new byte[cipherSize];
-            using var aes = new AesGcm(key);
-            aes.Decrypt(iv, cipherBytes, tag, plainBytes);
-            return plainBytes.ToArray();
-        }
-
-        public static byte [] Decrypt(byte[] encryptedData, byte[] key, byte[] src)
-        {
-            var ciphertext = encryptedData[0..^16];
-            var tag = encryptedData[^16..];
-            byte[] decrytedBytes = new byte [ciphertext.Length];
-            try
-            {
-                var aes = new AesGcm(key);
-
-                byte[] iv = new byte[12];
-                Array.Copy(src, iv, 8);              
-                
-                aes.Decrypt(iv, ciphertext, tag, decrytedBytes);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);              
-            }
-
-            return decrytedBytes;            
-        }
-       
-        /*
-        public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte [] src)
-        {
-            var ciphertext = encryptedData[0..^16];
-            var tag = encryptedData[^16..];
-            using var aes = new AesGcm(key);
-            var plaintext = new byte[ciphertext.Length];
-            aes.Decrypt(src, ciphertext, tag, plaintext);
-            return plaintext;
-        }
-        */
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
@@ -174,7 +107,7 @@ namespace TestAPILayer.Controllers
             var stringArray = JSONArrayToList(jsonArrayString);
 
             byte[] srcReceived = StringToBytes(stringArray[stringArray.Count - 1]);
-            Console.WriteLine($"Received SRC from test-ui: {KeyDerivation.ByteArrayToString(srcReceived)}");
+            Console.WriteLine($"Received SRC from test-ui: {CryptoUtils.ByteArrayToString(srcReceived)}");
             Console.WriteLine();
             //
             // allocate memory for the data shards byte matrix
@@ -185,20 +118,20 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[8];
             string secretString = "secret";
             int n = 3;
-            KeyDerivation.GenerateKeys(ref encrypts, ref signs, ref src, secretString, n);
+            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, secretString, n);
 
 
             Console.WriteLine("encrypts:");
             for (int i = 0; i < encrypts.Count; i++)
             {
-                Console.WriteLine($"encryts[{i}] Key: {KeyDerivation.ByteArrayToString(encrypts[i])}");
+                Console.WriteLine($"encryts[{i}] Key: {CryptoUtils.ByteArrayToString(encrypts[i])}");
                 Console.WriteLine();
             }
 
             Console.WriteLine("signs:");
             for (int i = 0; i < signs.Count; i++)
             {
-                Console.WriteLine($"signs[{i}] Key: {KeyDerivation.ByteArrayToString(signs[i])}");
+                Console.WriteLine($"signs[{i}] Key: {CryptoUtils.ByteArrayToString(signs[i])}");
                 Console.WriteLine();
             }
 
@@ -208,10 +141,10 @@ namespace TestAPILayer.Controllers
                 // convert string to bytes
                 byte[] encryptedShardBytes = StringToBytes(stringArray[i]);
                 
-                byte[] shardBytes = Decrypt(ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
+                byte[] shardBytes = CryptoUtils.Decrypt(ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
 
                 // Write to console out for debug
-                Console.WriteLine($"shard[{i}]: {KeyDerivation.ByteArrayToString(shardBytes)}");
+                Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
 
                 // copy shard to shard matrix
                 dataShards[i] = new byte [shardBytes.Length];
