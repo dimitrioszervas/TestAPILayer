@@ -15,6 +15,8 @@ namespace TestAPILayer
             ENCRYPT
         }
 
+        public const int NUM_SERVERS = 3;
+
         public const int KEY_SIZE = 32;
 
         public const int TAG_SIZE = 16;

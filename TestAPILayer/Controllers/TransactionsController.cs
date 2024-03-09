@@ -89,6 +89,8 @@ namespace TestAPILayer.Controllers
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
             int numShards = stringArray.Count - 1;
+            int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;
+
             List<byte[]> encrypts = new List<byte[]>();
             List<byte[]> signs = new List<byte[]>();
             byte[] src = new byte[8];
@@ -114,8 +116,11 @@ namespace TestAPILayer.Controllers
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
+                int encryptsIndex = (i / numShardsPerServer) + 1;
                 // decrypt string array                
-                byte[] shardBytes = CryptoUtils.Decrypt(CryptoUtils.ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
+                byte[] shardBytes = CryptoUtils.Decrypt(CryptoUtils.ConvertStringToBase64(stringArray[i]), encrypts[encryptsIndex], src);
+
+                Console.WriteLine($"Encrypts Index: {encryptsIndex}");
 
                 // Write to console out for debug
                 Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
