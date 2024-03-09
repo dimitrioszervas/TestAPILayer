@@ -36,22 +36,7 @@ namespace TestAPILayer.Controllers
                 var cbor = CBORObject.Read(stream);
                 return cbor;
             }
-        } 
-
- 
-        // Converts a byte string to a Base64 string
-        private static string ConvertStringToBase64(string encoded)
-        {
-            encoded = encoded.Replace('-', '+').Replace('_', '/');
-            var d = encoded.Length % 4;
-            if (d != 0)
-            {
-                encoded = encoded.TrimEnd('=');
-                encoded += d % 2 > 0 ? "=" : "==";
-            }
-
-            return encoded;
-        }
+        }   
 
         // Strips padding addded during the Reed-Solomon sharding
         private static byte[] StripPadding(byte[] paddedData)
@@ -88,16 +73,7 @@ namespace TestAPILayer.Controllers
         {
             return JsonConvert.DeserializeObject<JSONArray>("{\"values\":" + jsonArrayString + "}").values;
         }
-
-        // converts a CBOR byte string to bytes
-        private static byte [] StringToBytes(string str)
-        {
-            string base64String = ConvertStringToBase64(str);
-
-            // convert base64 string to bytes
-            return Convert.FromBase64String(base64String);
-        }
-
+ 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromJSON(string jsonArrayString)
@@ -106,7 +82,7 @@ namespace TestAPILayer.Controllers
             // we map the JSON array string to a C# object.
             var stringArray = JSONArrayToList(jsonArrayString);
 
-            byte[] srcReceived = StringToBytes(stringArray[stringArray.Count - 1]);
+            byte[] srcReceived = CryptoUtils.StringToBytes(stringArray[stringArray.Count - 1]);
             Console.WriteLine($"Received SRC from test-ui: {CryptoUtils.ByteArrayToString(srcReceived)}");
             Console.WriteLine();
             //
@@ -139,7 +115,7 @@ namespace TestAPILayer.Controllers
             for (int i = 0; i < numShards; i++)
             {
                 // decrypt string array                
-                byte[] shardBytes = CryptoUtils.Decrypt(ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
+                byte[] shardBytes = CryptoUtils.Decrypt(CryptoUtils.ConvertStringToBase64(stringArray[i]), encrypts[i+1], src);               
 
                 // Write to console out for debug
                 Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
@@ -195,8 +171,8 @@ namespace TestAPILayer.Controllers
 
             var transanctionValues = JSONArrayToList(binaryStringCBOR.ToJSONString());
 
-            byte[] shardsCBORBytes = StringToBytes(transanctionValues[0]);
-            byte[] hmacResultCBORBytes = StringToBytes(transanctionValues[1]);
+            byte[] shardsCBORBytes = CryptoUtils.StringToBytes(transanctionValues[0]);
+            byte[] hmacResultCBORBytes = CryptoUtils.StringToBytes(transanctionValues[1]);
 
 
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
