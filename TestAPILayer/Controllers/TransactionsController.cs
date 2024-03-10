@@ -2,15 +2,12 @@
 using System.Text;
 using PeterO.Cbor;
 using Newtonsoft.Json;
-using System.Security.Cryptography;
-using System.Security;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 
 
 
 namespace TestAPILayer.Controllers
 {
-    
+
 
     [Route("api/[controller]")]
     [ApiController]
@@ -81,11 +78,7 @@ namespace TestAPILayer.Controllers
             Console.WriteLine();
             // we map the JSON array string to a C# object.
             var stringArray = JSONArrayToList(jsonArrayString);
-
-            byte[] srcReceived = CryptoUtils.StringToBytes(stringArray[stringArray.Count - 1]);
-            Console.WriteLine($"Received SRC from test-ui: {CryptoUtils.ByteArrayToString(srcReceived)}");
-            Console.WriteLine();
-            //
+                     
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
             int numShards = stringArray.Count - 1;
@@ -95,9 +88,8 @@ namespace TestAPILayer.Controllers
             List<byte[]> signs = new List<byte[]>();
             byte[] src = new byte[8];
             string secretString = "secret";
-            int n = 3;
-            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, secretString, n);
-
+           
+            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, secretString, CryptoUtils.NUM_SERVERS);
 
             Console.WriteLine("encrypts:");
             for (int i = 0; i < encrypts.Count; i++)
@@ -117,8 +109,11 @@ namespace TestAPILayer.Controllers
             for (int i = 0; i < numShards; i++)
             {
                 int encryptsIndex = (i / numShardsPerServer) + 1;
+
+                byte[] encryptedShard = CryptoUtils.StringToBytes(stringArray[i]);
+
                 // decrypt string array                
-                byte[] shardBytes = CryptoUtils.Decrypt(CryptoUtils.ConvertStringToBase64(stringArray[i]), encrypts[encryptsIndex], src);
+                byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
 
                 Console.WriteLine($"Encrypts Index: {encryptsIndex}");
 

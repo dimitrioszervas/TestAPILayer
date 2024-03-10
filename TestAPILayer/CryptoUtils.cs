@@ -45,17 +45,16 @@ namespace TestAPILayer
             return Convert.FromBase64String(base64String);
         }
 
-        public static byte[] Decrypt(string base64Ciphertext, byte[] key, byte[] src)
+        public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] src)
         {
 
-            // convert from base64 to raw bytes spans
-            var encryptedData = Convert.FromBase64String(base64Ciphertext).AsSpan();
+            // get raw bytes spans
+            var encryptedData = cipherData.AsSpan();
 
-            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 bytes
-            //var ivSizeBytes = 12; // 12 bytes iv
+            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 bytes           
 
             // ciphertext size is whole data - iv - tag
-            var cipherSize = encryptedData.Length - tagSizeBytes;// - ivSizeBytes;
+            var cipherSize = encryptedData.Length - tagSizeBytes;
 
             // extract iv (nonce) 12 bytes prefix
             //var iv = encryptedData.Slice(0, ivSizeBytes);
@@ -77,6 +76,8 @@ namespace TestAPILayer
             aes.Decrypt(iv, cipherBytes, tag, plainBytes);
             return plainBytes.ToArray();
         }
+
+        /*
 
         public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte[] src)
         {
@@ -100,19 +101,8 @@ namespace TestAPILayer
 
             return decrytedBytes;
         }
-
-        /*
-        public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte [] src)
-        {
-            var ciphertext = encryptedData[0..^16];
-            var tag = encryptedData[^16..];
-            using var aes = new AesGcm(key);
-            var plaintext = new byte[ciphertext.Length];
-            aes.Decrypt(src, ciphertext, tag, plaintext);
-            return plaintext;
-        }
         */
-
+       
         public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte[] src, byte[] tag)
         {
             var ciphertext = encryptedData;// encryptedData[0..^16];
