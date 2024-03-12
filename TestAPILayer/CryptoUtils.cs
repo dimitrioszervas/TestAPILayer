@@ -222,17 +222,17 @@ namespace TestAPILayer
             Array.Copy(src, srcOut, src.Length);
         }
 
-        public static string ComputeHash(string secret, byte [] payload)
+        public static byte [] ComputeHash(string secret, byte [] payload)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(secret);
             var hmac = new HMACSHA256(bytes);           
 
-            return Convert.ToBase64String(hmac.ComputeHash(payload));
+            return hmac.ComputeHash(payload);
         }
 
         public static bool HashIsValid(string secret, byte [] payload, byte [] verifyBytes)
         {
-            ReadOnlySpan<byte> hashBytes = Convert.FromBase64String(ComputeHash(secret, payload));          
+            ReadOnlySpan<byte> hashBytes = ComputeHash(secret, payload);          
 
             return CryptographicOperations.FixedTimeEquals(hashBytes, verifyBytes);
         }
