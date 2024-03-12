@@ -167,19 +167,14 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PostTransaction()
-        {          
-            // Get the binary string from the request 
-            string binaryString = "";
-            using (var reader = new StreamReader(Request.Body))
+        {
+            byte[] binaryStringBytes;
+            using (var ms = new MemoryStream(2048))
             {
-                binaryString = await reader.ReadToEndAsync();
-                Console.WriteLine("----------------------------------------------------------------------");
-                Console.WriteLine($"Binary String Received: {binaryString}");               
+                await Request.Body.CopyToAsync(ms);
+                binaryStringBytes = ms.ToArray();  
             }
-
-            // Convert binary string to a byte array.  
-            byte[] binaryStringBytes = BinaryStringToBytes(binaryString);
-
+          
             // Decode binary string's CBOR bytes  
             CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(binaryStringBytes);
            
@@ -247,8 +242,8 @@ namespace TestAPILayer.Controllers
             Console.WriteLine($"Rebuilt Data: {rebuiltDataString}");
             Console.WriteLine();
 
-            return Ok(rebuiltDataCBOR.ToJSONString());
-         
+            return Ok(rebuiltDataCBOR.ToJSONString());          
+
         }
     }
 }
