@@ -74,9 +74,15 @@ namespace TestAPILayer.Controllers
  
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
-        private static byte[][] GetShardsFromJSON(string jsonArrayString)
-        {
-            Console.WriteLine();
+        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, byte[] hmacResultBytes)
+        {           
+
+            CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
+         
+            Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");
+
+            string jsonArrayString = shardsCBOR.ToJSONString();
+
             // we map the JSON array string to a C# object.
             var stringArray = JSONArrayToList(jsonArrayString);
                      
@@ -91,7 +97,11 @@ namespace TestAPILayer.Controllers
             string secretString = "secret";
            
             CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, secretString, CryptoUtils.NUM_SERVERS);
-                    
+
+            bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
+
+            Console.WriteLine($"Data Verified: { verified}");
+
             //Console.WriteLine("encrypts:");
             //for (int i = 0; i < encrypts.Count; i++)
             //{
@@ -173,18 +183,10 @@ namespace TestAPILayer.Controllers
             var transanctionValues = JSONArrayToList(binaryStringCBOR.ToJSONString());
 
             byte[] shardsCBORBytes = CryptoUtils.StringToBytes(transanctionValues[0]);
-            byte[] hmacResultBytes = CryptoUtils.StringToBytes(transanctionValues[1]);
-
-            CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
-
-            Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");
-            //Console.WriteLine($"hmacResult: {Encoding.UTF8.GetString(hmacResultBytes)}");
-            
-            bool verified = CryptoUtils.Verify(hmacResultBytes, shardsCBORBytes);
-            Console.WriteLine($"data verified: {verified}");
+            byte[] hmacResultBytes = CryptoUtils.StringToBytes(transanctionValues[1]);      
 
             // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
-            byte [][] shards = GetShardsFromJSON(shardsCBOR.ToJSONString());
+            byte [][] shards = GetShardsFromCBOR(shardsCBORBytes, hmacResultBytes);
             Console.WriteLine("----------------------------------------------------------------------");
             
             // Get shard length (all shards are of equal length).

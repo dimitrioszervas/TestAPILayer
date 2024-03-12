@@ -221,52 +221,19 @@ namespace TestAPILayer
             Array.Copy(src, srcOut, src.Length);
         }
 
-        public static byte [] ComputeHash(string secret, byte [] payload)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(secret);
-            var hmac = new HMACSHA256(bytes);           
+        private static byte [] ComputeHash(byte [] key, byte [] data)
+        {          
+            var hmac = new HMACSHA256(key);           
 
-            return hmac.ComputeHash(payload);
+            return hmac.ComputeHash(data);
         }
 
-        public static bool HashIsValid(string secret, byte [] payload, byte [] verifyBytes)
+        public static bool HashIsValid(byte [] key, byte [] data, byte [] hmacResult)
         {
-            ReadOnlySpan<byte> hashBytes = ComputeHash(secret, payload);          
+            ReadOnlySpan<byte> hashBytes = ComputeHash(key, data);          
 
-            return CryptographicOperations.FixedTimeEquals(hashBytes, verifyBytes);
+            return CryptographicOperations.FixedTimeEquals(hashBytes, hmacResult);
         }
 
-        public static bool Verify(byte[] key, byte[] data)
-        {
-            bool err = false;
-            // Initialize the keyed hash object.
-            using (HMACSHA256 hmac = new HMACSHA256(key))
-            {
-                // Create an array to hold the keyed hash value read from the file.
-                byte[] storedHash = new byte[hmac.HashSize / 8];                
-                   
-                byte[] computedHash = hmac.ComputeHash(data);
-                // compare the computed hash with the stored value
-
-                for (int i = 0; i < storedHash.Length; i++)
-                {
-                    if (computedHash[i] != storedHash[i])
-                    {
-                        err = true;
-                    }
-                }
-               
-            }
-            if (err)
-            {
-                //Console.WriteLine("Hash values differ! Signed data has been tampered with!");
-                return false;
-            }
-            else
-            {
-                //Console.WriteLine("Hash values agree -- no tampering occurred.");
-                return true;
-            }
-        } //end VerifyFile
     }
 }
