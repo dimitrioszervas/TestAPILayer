@@ -100,7 +100,7 @@ namespace TestAPILayer.Controllers
 
             bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
 
-            Console.WriteLine($"Data Verified: { verified}");
+            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
             //Console.WriteLine("encrypts:");
             //for (int i = 0; i < encrypts.Count; i++)
@@ -116,29 +116,36 @@ namespace TestAPILayer.Controllers
             //    Console.WriteLine();
             //}
 
-            byte[][] dataShards = new byte[numShards][];
-            for (int i = 0; i < numShards; i++)
+            if (verified)
             {
-                int encryptsIndex = (i / numShardsPerServer) + 1;
+                byte[][] dataShards = new byte[numShards][];
+                for (int i = 0; i < numShards; i++)
+                {
+                    int encryptsIndex = (i / numShardsPerServer) + 1;
 
-                byte[] encryptedShard = CryptoUtils.StringToBytes(stringArray[i]);
+                    byte[] encryptedShard = CryptoUtils.StringToBytes(stringArray[i]);
 
-                // decrypt string array                
-                byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
+                    // decrypt string array                
+                    byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
 
-                //Console.WriteLine($"Encrypts Index: {encryptsIndex}");
+                    //Console.WriteLine($"Encrypts Index: {encryptsIndex}");
 
-                // Write to console out for debug
-                //Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
+                    // Write to console out for debug
+                    //Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
 
-                // copy shard to shard matrix
-                dataShards[i] = new byte [shardBytes.Length];
-                Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
+                    // copy shard to shard matrix
+                    dataShards[i] = new byte[shardBytes.Length];
+                    Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
+                }
+
+                Console.WriteLine();
+
+                return dataShards;
             }
-          
-            Console.WriteLine();
-
-            return dataShards;
+            else
+            {
+                return null;
+            }
         }
 
         // Converts the binary string received from the request to bytes.
@@ -187,6 +194,12 @@ namespace TestAPILayer.Controllers
 
             // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromCBOR(shardsCBORBytes, hmacResultBytes);
+
+            if (shards == null)
+            {
+                return Ok("Received data not verified");
+            }
+
             Console.WriteLine("----------------------------------------------------------------------");
             
             // Get shard length (all shards are of equal length).
