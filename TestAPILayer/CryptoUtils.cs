@@ -175,16 +175,15 @@ namespace TestAPILayer
         {
             string saltString = "";
 
-
-            Console.WriteLine($"secret string: {secretString}");
-            Console.WriteLine();
+            //Console.WriteLine($"secret string: {secretString}");
+            //Console.WriteLine();
 
             byte[] secret = Encoding.UTF8.GetBytes(secretString);
             byte[] salt = Encoding.UTF8.GetBytes(saltString);
 
 
-            Console.WriteLine($"secret: {ByteArrayToString(secret)}");
-            Console.WriteLine();
+            //Console.WriteLine($"secret: {ByteArrayToString(secret)}");
+            //Console.WriteLine();
 
             byte[] src = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                         ikm: secret,
@@ -194,8 +193,8 @@ namespace TestAPILayer
 
             salt = src;
 
-            Console.WriteLine($"src: {ByteArrayToString(src)}");
-            Console.WriteLine();
+            //Console.WriteLine($"src: {ByteArrayToString(src)}");
+            //Console.WriteLine();
 
             byte[] sign = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                          ikm: secret,
@@ -203,8 +202,8 @@ namespace TestAPILayer
                                          salt: salt,
                                          info: Encoding.UTF8.GetBytes("sign"));
 
-            Console.WriteLine($"sign: {ByteArrayToString(sign)}");
-            Console.WriteLine();
+            //Console.WriteLine($"sign: {ByteArrayToString(sign)}");
+            //Console.WriteLine();
 
             byte[] encrypt = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                            ikm: secret,
@@ -212,8 +211,8 @@ namespace TestAPILayer
                                            salt: salt,
                                            info: Encoding.UTF8.GetBytes("encrypt"));
 
-            Console.WriteLine($"encrypt: {ByteArrayToString(encrypt)}");
-            Console.WriteLine();
+            //Console.WriteLine($"encrypt: {ByteArrayToString(encrypt)}");
+            //Console.WriteLine();
 
             encrypts = GenerateNKeys(n, salt, KeyType.ENCRYPT, encrypt);
             signs = GenerateNKeys(n, salt, KeyType.SIGN, sign);
@@ -237,6 +236,37 @@ namespace TestAPILayer
             return CryptographicOperations.FixedTimeEquals(hashBytes, verifyBytes);
         }
 
-   
+        public static bool Verify(byte[] key, byte[] data)
+        {
+            bool err = false;
+            // Initialize the keyed hash object.
+            using (HMACSHA256 hmac = new HMACSHA256(key))
+            {
+                // Create an array to hold the keyed hash value read from the file.
+                byte[] storedHash = new byte[hmac.HashSize / 8];                
+                   
+                byte[] computedHash = hmac.ComputeHash(data);
+                // compare the computed hash with the stored value
+
+                for (int i = 0; i < storedHash.Length; i++)
+                {
+                    if (computedHash[i] != storedHash[i])
+                    {
+                        err = true;
+                    }
+                }
+               
+            }
+            if (err)
+            {
+                //Console.WriteLine("Hash values differ! Signed data has been tampered with!");
+                return false;
+            }
+            else
+            {
+                //Console.WriteLine("Hash values agree -- no tampering occurred.");
+                return true;
+            }
+        } //end VerifyFile
     }
 }

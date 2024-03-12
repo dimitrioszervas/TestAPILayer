@@ -2,6 +2,7 @@
 using System.Text;
 using PeterO.Cbor;
 using Newtonsoft.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 
@@ -90,20 +91,20 @@ namespace TestAPILayer.Controllers
             string secretString = "secret";
            
             CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, secretString, CryptoUtils.NUM_SERVERS);
+                    
+            //Console.WriteLine("encrypts:");
+            //for (int i = 0; i < encrypts.Count; i++)
+            //{
+            //    Console.WriteLine($"encryts[{i}] Key: {CryptoUtils.ByteArrayToString(encrypts[i])}");
+            //    Console.WriteLine();
+            //}
 
-            Console.WriteLine("encrypts:");
-            for (int i = 0; i < encrypts.Count; i++)
-            {
-                Console.WriteLine($"encryts[{i}] Key: {CryptoUtils.ByteArrayToString(encrypts[i])}");
-                Console.WriteLine();
-            }
-
-            Console.WriteLine("signs:");
-            for (int i = 0; i < signs.Count; i++)
-            {
-                Console.WriteLine($"signs[{i}] Key: {CryptoUtils.ByteArrayToString(signs[i])}");
-                Console.WriteLine();
-            }
+            //Console.WriteLine("signs:");
+            //for (int i = 0; i < signs.Count; i++)
+            //{
+            //    Console.WriteLine($"signs[{i}] Key: {CryptoUtils.ByteArrayToString(signs[i])}");
+            //    Console.WriteLine();
+            //}
 
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
@@ -115,10 +116,10 @@ namespace TestAPILayer.Controllers
                 // decrypt string array                
                 byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
 
-                Console.WriteLine($"Encrypts Index: {encryptsIndex}");
+                //Console.WriteLine($"Encrypts Index: {encryptsIndex}");
 
                 // Write to console out for debug
-                Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
+                //Console.WriteLine($"shard[{i}]: {CryptoUtils.ByteArrayToString(shardBytes)}");
 
                 // copy shard to shard matrix
                 dataShards[i] = new byte [shardBytes.Length];
@@ -174,14 +175,13 @@ namespace TestAPILayer.Controllers
             byte[] shardsCBORBytes = CryptoUtils.StringToBytes(transanctionValues[0]);
             byte[] hmacResultBytes = CryptoUtils.StringToBytes(transanctionValues[1]);
 
-            Console.WriteLine($"Verified: {CryptoUtils.HashIsValid("secret", hmacResultBytes, shardsCBORBytes)}");
-
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
 
-            Console.WriteLine($"hmacResult: {Encoding.UTF8.GetString(hmacResultBytes)}");
-
             Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");
-            //Console.WriteLine($"hmac result CBOR to JSON: {hmacResultCBOR.ToJSONString()}");
+            //Console.WriteLine($"hmacResult: {Encoding.UTF8.GetString(hmacResultBytes)}");
+            
+            bool verified = CryptoUtils.Verify(hmacResultBytes, shardsCBORBytes);
+            Console.WriteLine($"data verified: {verified}");
 
             // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromJSON(shardsCBOR.ToJSONString());
