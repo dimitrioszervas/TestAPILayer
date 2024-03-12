@@ -3,6 +3,7 @@ using System.Text;
 using PeterO.Cbor;
 using Newtonsoft.Json;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Formats.Cbor;
 
 
 
@@ -13,28 +14,7 @@ namespace TestAPILayer.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class TransactionsController : ControllerBase
-    {
-            
-
-        // Class that represents a JSON Array of strings used to map a JSON array of strings
-        // CBOR arrives as string arrays from frontend and we use this object to
-        // map the CBOR JSON arrays.
-        sealed class JSONArray
-        {
-            public List<string> values { set; get; } = new List<string>();
-        }
-
- 
-        // Converts a byte array to a CBOR C# object using memory stream.
-        private static CBORObject BytesToCBORObject(byte[] bytes)
-        {
-            using (var stream = new MemoryStream(bytes))
-            {
-                // Read the CBOR object from the stream
-                var cbor = CBORObject.Read(stream);
-                return cbor;
-            }
-        }   
+    {               
 
         // Strips padding addded during the Reed-Solomon sharding
         private static byte[] StripPadding(byte[] paddedData)
@@ -64,13 +44,8 @@ namespace TestAPILayer.Controllers
                 Console.WriteLine(ex);
                 throw;
             }
-        }       
+        }      
 
-        // we map the JSON array string to a C# List object.
-        private static List<string> JSONArrayToList(string jsonArrayString)
-        {
-            return JsonConvert.DeserializeObject<JSONArray>("{\"values\":" + jsonArrayString + "}").values;
-        }
  
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
@@ -79,16 +54,14 @@ namespace TestAPILayer.Controllers
 
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
          
-            Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");
-
-            string jsonArrayString = shardsCBOR.ToJSONString();
+            Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");           
 
             // we map the JSON array string to a C# object.
-            var stringArray = JSONArrayToList(jsonArrayString);
+            var shardsCBORValues = shardsCBOR.Values;
                      
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
-            int numShards = stringArray.Count - 1;
+            int numShards = shardsCBORValues.Count - 1;
             int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;
 
             List<byte[]> encrypts = new List<byte[]>();
@@ -123,7 +96,7 @@ namespace TestAPILayer.Controllers
                 {
                     int encryptsIndex = (i / numShardsPerServer) + 1;
 
-                    byte[] encryptedShard = CryptoUtils.StringToBytes(stringArray[i]);
+                    byte[] encryptedShard = shardsCBORValues.ElementAt(i).GetByteString();
 
                     // decrypt string array                
                     byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
@@ -146,19 +119,7 @@ namespace TestAPILayer.Controllers
             {
                 return null;
             }
-        }
-
-        // Converts the binary string received from the request to bytes.
-        private static byte [] BinaryStringToBytes(string binaryString)
-        {
-            byte[] binaryStringBytes = new byte[binaryString.Length];
-            for (int i = 0; i < binaryStringBytes.Length; i++)
-            {
-                binaryStringBytes[i] = (byte)binaryString.ElementAt(i);
-            }
-
-            return binaryStringBytes;
-        }
+        }       
               
         // Transaction endpoint
         [HttpPost]
@@ -173,19 +134,17 @@ namespace TestAPILayer.Controllers
             {
                 await Request.Body.CopyToAsync(ms);
                 binaryStringBytes = ms.ToArray();  
-            }
-          
+            }           
+           
             // Decode binary string's CBOR bytes  
             CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(binaryStringBytes);
            
             Console.WriteLine("----------------------------------------------------------------------");
             Console.WriteLine($"Binary String CBOR to JSON: {binaryStringCBOR.ToJSONString()}");
-            Console.WriteLine("----------------------------------------------------------------------");
+            Console.WriteLine("----------------------------------------------------------------------");                     
 
-            var transanctionValues = JSONArrayToList(binaryStringCBOR.ToJSONString());
-
-            byte[] shardsCBORBytes = CryptoUtils.StringToBytes(transanctionValues[0]);
-            byte[] hmacResultBytes = CryptoUtils.StringToBytes(transanctionValues[1]);      
+            byte[] shardsCBORBytes = binaryStringCBOR.Values.ElementAt(0).GetByteString();
+            byte[] hmacResultBytes = binaryStringCBOR.Values.ElementAt(1).GetByteString();
 
             // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromCBOR(shardsCBORBytes, hmacResultBytes);
@@ -242,8 +201,8 @@ namespace TestAPILayer.Controllers
             Console.WriteLine($"Rebuilt Data: {rebuiltDataString}");
             Console.WriteLine();
 
-            return Ok(rebuiltDataCBOR.ToJSONString());          
-
+            return Ok(rebuiltDataCBOR.ToJSONString());  
+           
         }
     }
 }
