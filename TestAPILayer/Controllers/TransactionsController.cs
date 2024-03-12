@@ -172,12 +172,13 @@ namespace TestAPILayer.Controllers
             var transanctionValues = JSONArrayToList(binaryStringCBOR.ToJSONString());
 
             byte[] shardsCBORBytes = CryptoUtils.StringToBytes(transanctionValues[0]);
-            byte[] hmacResultCBORBytes = CryptoUtils.StringToBytes(transanctionValues[1]);
+            byte[] hmacResultBytes = CryptoUtils.StringToBytes(transanctionValues[1]);
 
+            Console.WriteLine($"Verified: {CryptoUtils.HashIsValid("secret", hmacResultBytes, shardsCBORBytes)}");
 
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
 
-            //CBORObject hmacResultCBOR = CBORObject.DecodeFromBytes(hmacResultCBORBytes);
+            Console.WriteLine($"hmacResult: {Encoding.UTF8.GetString(hmacResultBytes)}");
 
             Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");
             //Console.WriteLine($"hmac result CBOR to JSON: {hmacResultCBOR.ToJSONString()}");
