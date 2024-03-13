@@ -73,7 +73,9 @@ namespace TestAPILayer.Controllers
                 byte[][] dataShards = new byte[numShards][];
                 for (int i = 0; i < numShards; i++)
                 {
-                    int encryptsIndex = (i / numShardsPerServer) + 1;
+                    // we start encrypts[1] we don't use encrypts[0]
+                    // we may have more than on shard per server 
+                    int encryptsIndex = (i / numShardsPerServer) + 1; 
 
                     byte[] encryptedShard = shardsCBOR.Values.ElementAt(i).GetByteString();
 
