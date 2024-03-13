@@ -136,15 +136,15 @@ namespace TestAPILayer.Controllers
                 requestBytes = ms.ToArray();  
             }           
            
-            // Decode binary string's CBOR bytes  
-            CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(requestBytes);
+            // Decode request's CBOR bytes  
+            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
            
             Console.WriteLine("----------------------------------------------------------------------");
-            Console.WriteLine($"Binary String CBOR to JSON: {binaryStringCBOR.ToJSONString()}");
+            Console.WriteLine($"Binary String CBOR to JSON: {requestCBOR.ToJSONString()}");
             Console.WriteLine("----------------------------------------------------------------------");                     
 
-            byte[] shardsCBORBytes = binaryStringCBOR.Values.ElementAt(0).GetByteString();
-            byte[] hmacResultBytes = binaryStringCBOR.Values.ElementAt(1).GetByteString();
+            byte[] shardsCBORBytes = requestCBOR.Values.ElementAt(0).GetByteString();
+            byte[] hmacResultBytes = requestCBOR.Values.ElementAt(1).GetByteString();
 
             // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromCBOR(shardsCBORBytes, hmacResultBytes);
