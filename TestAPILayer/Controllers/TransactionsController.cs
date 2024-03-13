@@ -130,7 +130,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> PostTransaction()
         {
             byte[] binaryStringBytes;
-            using (var ms = new MemoryStream(2048))
+            using (var ms = new MemoryStream())
             {
                 await Request.Body.CopyToAsync(ms);
                 binaryStringBytes = ms.ToArray();  
