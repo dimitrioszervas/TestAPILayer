@@ -68,20 +68,6 @@ namespace TestAPILayer.Controllers
 
             Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
-            //Console.WriteLine("encrypts:");
-            //for (int i = 0; i < encrypts.Count; i++)
-            //{
-            //    Console.WriteLine($"encryts[{i}] Key: {CryptoUtils.ByteArrayToString(encrypts[i])}");
-            //    Console.WriteLine();
-            //}
-
-            //Console.WriteLine("signs:");
-            //for (int i = 0; i < signs.Count; i++)
-            //{
-            //    Console.WriteLine($"signs[{i}] Key: {CryptoUtils.ByteArrayToString(signs[i])}");
-            //    Console.WriteLine();
-            //}
-
             if (verified)
             {
                 byte[][] dataShards = new byte[numShards][];
