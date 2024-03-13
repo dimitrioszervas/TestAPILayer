@@ -1,9 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Text;
 using PeterO.Cbor;
-using Newtonsoft.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Formats.Cbor;
 
 
 
@@ -54,7 +50,7 @@ namespace TestAPILayer.Controllers
 
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
          
-            Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");           
+            //Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");           
 
             // we map the JSON array string to a C# object.
             var shardsCBORValues = shardsCBOR.Values;
@@ -111,7 +107,7 @@ namespace TestAPILayer.Controllers
                     Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
                 }
 
-                Console.WriteLine();
+                //Console.WriteLine();
 
                 return dataShards;
             }
@@ -137,12 +133,8 @@ namespace TestAPILayer.Controllers
             }           
            
             // Decode request's CBOR bytes  
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-           
-            Console.WriteLine("----------------------------------------------------------------------");
-            Console.WriteLine($"Binary String CBOR to JSON: {requestCBOR.ToJSONString()}");
-            Console.WriteLine("----------------------------------------------------------------------");                     
-
+            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);           
+ 
             byte[] shardsCBORBytes = requestCBOR.Values.ElementAt(0).GetByteString();
             byte[] hmacResultBytes = requestCBOR.Values.ElementAt(1).GetByteString();
 
@@ -154,7 +146,7 @@ namespace TestAPILayer.Controllers
                 return Ok("Received data not verified");
             }
 
-            Console.WriteLine("----------------------------------------------------------------------");
+            //Console.WriteLine("----------------------------------------------------------------------");
             
             // Get shard length (all shards are of equal length).
             int shardLength = shards[0].Length;
@@ -163,10 +155,10 @@ namespace TestAPILayer.Controllers
             int nParityShards = nTotalShards / 2;
             int nDataShards = nTotalShards - nParityShards;
 
-            Console.WriteLine($"Total number of shards: {nTotalShards}");
-            Console.WriteLine($"Number of data shards: {nDataShards}");
-            Console.WriteLine($"Number of parity shards: {nParityShards}");
-            Console.WriteLine("----------------------------------------------------------------------");
+            //Console.WriteLine($"Total number of shards: {nTotalShards}");
+            //Console.WriteLine($"Number of data shards: {nDataShards}");
+            //Console.WriteLine($"Number of parity shards: {nParityShards}");
+            //Console.WriteLine("----------------------------------------------------------------------");
 
             // Set which shards are present - you have to have a minimum number = number of data shards
             bool[] shardsPresent = new bool[nTotalShards];
@@ -192,7 +184,7 @@ namespace TestAPILayer.Controllers
             // Decode rebuilt CBOR data bytes, after stripping the padding needed for the Reed-Solomon
             // which requires that all shards have to be equal in length. 
             byte[] cborDataBytes = StripPadding(rebuiltDataBytes);
-            Console.WriteLine($"CBOR Data bytes: {Encoding.UTF8.GetString(cborDataBytes)}");
+            //Console.WriteLine($"CBOR Data bytes: {Encoding.UTF8.GetString(cborDataBytes)}");
 
             CBORObject rebuiltDataCBOR = CBORObject.DecodeFromBytes(cborDataBytes);
             
