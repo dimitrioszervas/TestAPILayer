@@ -50,14 +50,11 @@ namespace TestAPILayer.Controllers
 
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
          
-            //Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}");           
-
-            // we map the JSON array string to a C# object.
-            var shardsCBORValues = shardsCBOR.Values;
+            //Console.WriteLine($"Shards CBOR to JSON: {shardsCBOR.ToJSONString()}"); 
                      
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
-            int numShards = shardsCBORValues.Count - 1;
+            int numShards = shardsCBOR.Values.Count - 1;
             int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;
 
             List<byte[]> encrypts = new List<byte[]>();
@@ -92,7 +89,7 @@ namespace TestAPILayer.Controllers
                 {
                     int encryptsIndex = (i / numShardsPerServer) + 1;
 
-                    byte[] encryptedShard = shardsCBORValues.ElementAt(i).GetByteString();
+                    byte[] encryptedShard = shardsCBOR.Values.ElementAt(i).GetByteString();
 
                     // decrypt string array                
                     byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
