@@ -129,15 +129,15 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PostTransaction()
         {
-            byte[] binaryStringBytes;
+            byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
                 await Request.Body.CopyToAsync(ms);
-                binaryStringBytes = ms.ToArray();  
+                requestBytes = ms.ToArray();  
             }           
            
             // Decode binary string's CBOR bytes  
-            CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(binaryStringBytes);
+            CBORObject binaryStringCBOR = CBORObject.DecodeFromBytes(requestBytes);
            
             Console.WriteLine("----------------------------------------------------------------------");
             Console.WriteLine($"Binary String CBOR to JSON: {binaryStringCBOR.ToJSONString()}");
