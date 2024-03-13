@@ -146,7 +146,7 @@ namespace TestAPILayer.Controllers
             byte[] shardsCBORBytes = requestCBOR.Values.ElementAt(0).GetByteString();
             byte[] hmacResultBytes = requestCBOR.Values.ElementAt(1).GetByteString();
 
-            // Extract the shards from the JSON string and put them in byte matrix (2D array of bytes).
+            // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
             byte [][] shards = GetShardsFromCBOR(shardsCBORBytes, hmacResultBytes);
 
             if (shards == null)
