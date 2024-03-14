@@ -6,7 +6,6 @@ using PeterO.Cbor;
 namespace TestAPILayer.Controllers
 {
 
-
     [Route("api/[controller]")]
     [ApiController]
     public class TransactionsController : ControllerBase

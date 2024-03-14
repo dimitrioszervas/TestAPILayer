@@ -224,6 +224,5 @@ namespace TestAPILayer
 
             return encoded;
         }
-
     }
 }
