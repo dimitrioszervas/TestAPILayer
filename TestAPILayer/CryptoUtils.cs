@@ -212,5 +212,18 @@ namespace TestAPILayer
             return CryptographicOperations.FixedTimeEquals(hashBytes, hmacResult);
         }
 
+        public static string ConvertStringToBase64(string encoded)
+        {
+            encoded = encoded.Replace('-', '+').Replace('_', '/');
+            var d = encoded.Length % 4;
+            if (d != 0)
+            {
+                encoded = encoded.TrimEnd('=');
+                encoded += d % 2 > 0 ? "=" : "==";
+            }
+
+            return encoded;
+        }
+
     }
 }

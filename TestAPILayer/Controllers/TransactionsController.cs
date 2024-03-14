@@ -166,7 +166,7 @@ namespace TestAPILayer.Controllers
             }
          
             byte[] cborDataBytes = RebuildDataUsingReeedSolomon(transactionShards);
-            //Console.WriteLine($"CBOR Data bytes: {Encoding.UTF8.GetString(cborDataBytes)}");
+            
 
             CBORObject rebuiltDataCBOR = CBORObject.DecodeFromBytes(cborDataBytes);
             
