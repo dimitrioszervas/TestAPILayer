@@ -40,9 +40,43 @@ namespace TestAPILayer.Controllers
                 Console.WriteLine(ex);
                 throw;
             }
-        }      
+        }
 
- 
+        public static byte[] RebuildDataUsingReeedSolomon(byte[][] shards)
+        {
+            // Get shard length (all shards are of equal length).
+            int shardLength = shards[0].Length;
+
+            int nTotalShards = shards.Length;
+            int nParityShards = nTotalShards / 2;
+            int nDataShards = nTotalShards - nParityShards;                      
+
+            // Set which shards are present - you have to have a minimum number = number of data shards
+            bool[] shardsPresent = new bool[nTotalShards];
+
+            for (int i = 0; i < nDataShards; i++)
+            {
+                shardsPresent[i] = true;
+            }
+
+            // Replicate the other shards using Reeed-Solomom.
+            var reedSolomon = new ReedSolomon.ReedSolomon(shardsPresent.Length - nParityShards, nParityShards);
+            reedSolomon.DecodeMissing(shards, shardsPresent, 0, shardLength);
+
+            // Write the Reed-Solomon matrix of shards to a 1D array of bytes
+            byte[] rebuiltDataBytes = new byte[shards.Length * shardLength];
+            int offSet = 0;
+            for (int j = 0; j < shards.Length - nParityShards; j++)
+            {
+                Array.Copy(shards[j], 0, rebuiltDataBytes, offSet, shardLength);
+                offSet += shardLength;
+            }
+
+            // Decode rebuilt CBOR data bytes, after stripping the padding needed for the Reed-Solomon
+            // which requires that all shards have to be equal in length. 
+            return StripPadding(rebuiltDataBytes);
+        }
+
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
         private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, byte[] hmacResultBytes)
@@ -100,8 +134,8 @@ namespace TestAPILayer.Controllers
             {
                 return null;
             }
-        }       
-              
+        }                    
+       
         // Transaction endpoint
         [HttpPost]
         [Route("PostTransaction")]       
@@ -120,55 +154,18 @@ namespace TestAPILayer.Controllers
             // Decode request's CBOR bytes  
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);           
  
-            byte[] shardsCBORBytes = requestCBOR.Values.ElementAt(0).GetByteString();
+            byte[] transanctionShardsCBORBytes = requestCBOR.Values.ElementAt(0).GetByteString();
             byte[] hmacResultBytes = requestCBOR.Values.ElementAt(1).GetByteString();
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte [][] shards = GetShardsFromCBOR(shardsCBORBytes, hmacResultBytes);
+            byte [][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, hmacResultBytes);
 
-            if (shards == null)
+            if (transactionShards == null)
             {
                 return Ok("Received data not verified");
             }
-
-            //Console.WriteLine("----------------------------------------------------------------------");
-            
-            // Get shard length (all shards are of equal length).
-            int shardLength = shards[0].Length;
-
-            int nTotalShards = shards.Length;
-            int nParityShards = nTotalShards / 2;
-            int nDataShards = nTotalShards - nParityShards;
-
-            //Console.WriteLine($"Total number of shards: {nTotalShards}");
-            //Console.WriteLine($"Number of data shards: {nDataShards}");
-            //Console.WriteLine($"Number of parity shards: {nParityShards}");
-            //Console.WriteLine("----------------------------------------------------------------------");
-
-            // Set which shards are present - you have to have a minimum number = number of data shards
-            bool[] shardsPresent = new bool[nTotalShards];
-
-            for (int i = 0; i < nDataShards; i++)
-            {
-                shardsPresent[i] = true;
-            }                       
-
-            // Replicate the other shards using Reeed-Solomom.
-            var reedSolomon = new ReedSolomon.ReedSolomon(shardsPresent.Length - nParityShards, nParityShards);
-            reedSolomon.DecodeMissing(shards, shardsPresent, 0, shardLength);
-            
-            // Write the Reed-Solomon matrix of shards to a 1D array of bytes
-            byte[] rebuiltDataBytes = new byte[shards.Length * shardLength];
-            int offSet = 0;
-            for (int j = 0; j < shards.Length - nParityShards; j++)
-            {
-                Array.Copy(shards[j], 0, rebuiltDataBytes, offSet, shardLength);
-                offSet += shardLength;
-            }
-
-            // Decode rebuilt CBOR data bytes, after stripping the padding needed for the Reed-Solomon
-            // which requires that all shards have to be equal in length. 
-            byte[] cborDataBytes = StripPadding(rebuiltDataBytes);
+         
+            byte[] cborDataBytes = RebuildDataUsingReeedSolomon(transactionShards);
             //Console.WriteLine($"CBOR Data bytes: {Encoding.UTF8.GetString(cborDataBytes)}");
 
             CBORObject rebuiltDataCBOR = CBORObject.DecodeFromBytes(cborDataBytes);
