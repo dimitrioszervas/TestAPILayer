@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Org.BouncyCastle.Utilities;
 using PeterO.Cbor;
 using System.Text;
+using TestAPILayer.ReedSolomon;
 
 
 
@@ -12,72 +13,7 @@ namespace TestAPILayer.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class TransactionsController : ControllerBase
-    {               
-
-        // Strips padding addded during the Reed-Solomon sharding
-        private static byte[] StripPadding(byte[] paddedData)
-        {
-            try
-            {
-                int padding = 1;
-                for (int i = paddedData.Length - 1; i >= 0; i--)
-                {
-                    if (paddedData[i] == 0)
-                    {
-                        padding++;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                byte[] strippedData = new byte[paddedData.Length - padding];
-                Array.Copy(paddedData, 0, strippedData, 0, strippedData.Length);
-
-                return strippedData;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                throw;
-            }
-        }
-
-        public static byte[] RebuildDataUsingReeedSolomon(byte[][] shards)
-        {
-            // Get shard length (all shards are of equal length).
-            int shardLength = shards[0].Length;
-
-            int nTotalShards = shards.Length;
-            int nParityShards = nTotalShards / 2;
-            int nDataShards = nTotalShards - nParityShards;                      
-
-            // Set which shards are present - you have to have a minimum number = number of data shards
-            bool[] shardsPresent = new bool[nTotalShards];
-
-            for (int i = 0; i < nDataShards; i++)
-            {
-                shardsPresent[i] = true;
-            }
-
-            // Replicate the other shards using Reeed-Solomom.
-            var reedSolomon = new ReedSolomon.ReedSolomon(shardsPresent.Length - nParityShards, nParityShards);
-            reedSolomon.DecodeMissing(shards, shardsPresent, 0, shardLength);
-
-            // Write the Reed-Solomon matrix of shards to a 1D array of bytes
-            byte[] rebuiltDataBytes = new byte[shards.Length * shardLength];
-            int offSet = 0;
-            for (int j = 0; j < shards.Length - nParityShards; j++)
-            {
-                Array.Copy(shards[j], 0, rebuiltDataBytes, offSet, shardLength);
-                offSet += shardLength;
-            }
-            
-            // Decode rebuilt CBOR data bytes, after stripping the padding needed for the Reed-Solomon
-            // which requires that all shards have to be equal in length. 
-            return StripPadding(rebuiltDataBytes);
-        }
+    {  
 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
@@ -152,7 +88,7 @@ namespace TestAPILayer.Controllers
                 return Ok("Received data not verified");
             }
          
-            byte[] cborTransactionBytes = RebuildDataUsingReeedSolomon(transactionShards);
+            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
             
 
             CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
@@ -171,7 +107,7 @@ namespace TestAPILayer.Controllers
             byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
                        
             byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
-            byte [] rebuiltEncKey = RebuildDataUsingReeedSolomon(thresholdShards);
+            byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
             string stringEncKey = CryptoUtils.ByteArrayToString(rebuiltEncKey);
          
             Console.WriteLine($"Rebuilt encKEY({rebuiltEncKey.Length}): {stringEncKey} ");
