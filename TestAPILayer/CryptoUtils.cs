@@ -152,15 +152,8 @@ namespace TestAPILayer
         {
             string saltString = "";
 
-            //Console.WriteLine($"secret string: {secretString}");
-            //Console.WriteLine();
-
             byte[] secret = Encoding.UTF8.GetBytes(secretString);
             byte[] salt = Encoding.UTF8.GetBytes(saltString);
-
-
-            //Console.WriteLine($"secret: {ByteArrayToString(secret)}");
-            //Console.WriteLine();
 
             byte[] src = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                         ikm: secret,
@@ -170,26 +163,18 @@ namespace TestAPILayer
 
             salt = src;
 
-            //Console.WriteLine($"src: {ByteArrayToString(src)}");
-            //Console.WriteLine();
-
             byte[] sign = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                          ikm: secret,
                                          outputLength: KEY_SIZE,
                                          salt: salt,
                                          info: Encoding.UTF8.GetBytes("sign"));
-
-            //Console.WriteLine($"sign: {ByteArrayToString(sign)}");
-            //Console.WriteLine();
+           
 
             byte[] encrypt = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                            ikm: secret,
                                            outputLength: KEY_SIZE,
                                            salt: salt,
-                                           info: Encoding.UTF8.GetBytes("encrypt"));
-
-            //Console.WriteLine($"encrypt: {ByteArrayToString(encrypt)}");
-            //Console.WriteLine();
+                                           info: Encoding.UTF8.GetBytes("encrypt"));           
 
             encrypts = GenerateNKeys(n, salt, KeyType.ENCRYPT, encrypt);
             signs = GenerateNKeys(n, salt, KeyType.SIGN, sign);

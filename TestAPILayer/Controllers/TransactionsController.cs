@@ -96,11 +96,7 @@ namespace TestAPILayer.Controllers
 
             UnsignedTransaction<CreateFolderRequest> transactionObj =
                 JsonConvert.DeserializeObject<UnsignedTransaction<CreateFolderRequest>>(rebuiltDataJSON);
-
-            //UnsignedTransaction<CreateFolderRequest> transactionObj =
-            //    CBORObject.DecodeObjectFromBytes<UnsignedTransaction<CreateFolderRequest>>(cborTransactionBytes);
-
-
+          
             string threshold = CryptoUtils.ConvertStringToBase64(transactionObj.REQ[0].encKEY);           
 
             byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
