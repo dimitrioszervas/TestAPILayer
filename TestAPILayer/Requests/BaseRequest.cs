@@ -1,4 +1,4 @@
-﻿namespace TestAPILayer
+﻿namespace TestAPILayer.Requests
 {
 
     public class BaseRequest
