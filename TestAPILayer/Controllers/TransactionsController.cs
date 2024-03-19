@@ -165,14 +165,11 @@ namespace TestAPILayer.Controllers
             UnsignedTransaction<InviteUserRequest> transactionObj =
                JsonConvert.DeserializeObject<UnsignedTransaction<InviteUserRequest>>(rebuiltDataJSON);
 
-            string threshold = CryptoUtils.ConvertStringToBase64(transactionObj.REQ[0].encKEY);           
-
-            byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
-                       
-            byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
-            byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
-            string stringEncKey = CryptoUtils.ByteArrayToString(rebuiltEncKey);         
-                  
+            //string threshold = CryptoUtils.ConvertStringToBase64(transactionObj.REQ[0].encKEY); 
+            //byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
+            //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
+            //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
+           
            
             return Ok(rebuiltDataJSON); 
            
