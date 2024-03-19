@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using PeterO.Cbor;
+using System.Security.Cryptography;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
 using TestAPILayer.Responses;
@@ -237,9 +239,19 @@ namespace TestAPILayer.Controllers
             CryptoUtils.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wTOKEN);
 
+            List<byte[]> SE_PUB = new List<byte[]>();
+            for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
+            {
+                ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
+                SE_PUB.Add(key.PublicKey.ToByteArray());
+                CryptoUtils.SE_PRIV.Add(key.ExportECPrivateKey());
+            }
 
+            var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
-            return Ok(rebuiltDataJSON);
+            Console.WriteLine(cbor.ToJSONString());
+
+            return Ok(cbor.ToJSONString());
 
         }
 
