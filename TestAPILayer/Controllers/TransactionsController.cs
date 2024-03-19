@@ -178,5 +178,71 @@ namespace TestAPILayer.Controllers
             return Ok(rebuiltDataJSON); 
            
         }
+
+        // Login endpoint
+        [HttpPost]
+        [Route("Login")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> Login()
+        {
+            byte[] requestBytes;
+            using (var ms = new MemoryStream())
+            {
+                await Request.Body.CopyToAsync(ms);
+                requestBytes = ms.ToArray();
+            }
+
+            // Decode request's CBOR bytes  
+            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
+
+            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] hmacResultBytes = requestCBOR[1].GetByteString();
+
+            List<byte[]> encrypts = new List<byte[]>();
+            List<byte[]> signs = new List<byte[]>();
+            byte[] src = new byte[8];
+            string ownerCode = CryptoUtils.OWNER_CODE;
+
+            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
+
+            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
+
+            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
+
+            // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
+            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
+
+            if (transactionShards == null)
+            {
+                return Ok("Received data not verified");
+            }
+
+            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
+
+            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
+
+            string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
+            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+
+            UnsignedTransaction<LoginRequest> transactionObj =
+               JsonConvert.DeserializeObject<UnsignedTransaction<LoginRequest>>(rebuiltDataJSON);
+
+            // servers unwrap + store KEYS to memory
+            for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
+            {
+                CryptoUtils.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WENCRYPTS[i]));
+                CryptoUtils.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WSIGNS[i]));
+            }
+
+            // servers store DS.PUB + DE.PUB + NONCE
+            CryptoUtils.DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DS_PUB);
+            CryptoUtils.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DE_PUB);
+            CryptoUtils.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
+
+            return Ok(rebuiltDataJSON);
+
+        }
     }
 }

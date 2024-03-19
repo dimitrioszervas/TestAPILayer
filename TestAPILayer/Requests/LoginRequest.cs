@@ -4,11 +4,11 @@
     {
         public string encKEY { get; set; }
 
-        public static byte[] DS_PUB;
-        public static byte[] DE_PUB;
-        public static byte[] NONCE;
+        public string DS_PUB;
+        public string DE_PUB;
+        public string NONCE;
 
-        public static List<byte[]> WENCRYPTS { get; set; }
-        public static List<byte[]> WSIGNS { get; set; }
+        public List<string> WENCRYPTS { get; set; }
+        public List<string> WSIGNS { get; set; }
     }
 }
