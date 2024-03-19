@@ -18,16 +18,7 @@ namespace TestAPILayer
         public const int KEY_SIZE = 32;
 
         public const int TAG_SIZE = 16;
-        public const int IV_SIZE = 12;
-
-        public static List<byte[]> ENCRYPTS = new List<byte[]>();
-        public static List<byte[]> SIGNS = new List<byte[]>();
-
-        public static List<byte[]> SE_PRIV = new List<byte[]>();
-
-        public static byte[] DS_PUB;
-        public static byte[] DE_PUB;
-        public static byte[] NONCE;
+        public const int IV_SIZE = 12; 
 
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] src)
         {
@@ -232,7 +223,6 @@ namespace TestAPILayer
                 return key;
             }
         }
-
 
     }
 }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using PeterO.Cbor;
 using System.Security.Cryptography;
@@ -162,21 +161,22 @@ namespace TestAPILayer.Controllers
           
             UnsignedTransaction<InviteRequest> transactionObj =
                JsonConvert.DeserializeObject<UnsignedTransaction<InviteRequest>>(rebuiltDataJSON);
-                       
+
             //byte[] thresholdCBORBytes = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].encKEY);
             //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
             //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
             //Store received OWN_ENCRYPTS & OWN_SIGNS to memory
+            MemStorage.Clear();
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++) {
-                CryptoUtils.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_ENCRYPTS[i]));
-                CryptoUtils.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_SIGNS[i]));
+                MemStorage.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_ENCRYPTS[i]));
+                MemStorage.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_SIGNS[i]));
             }
 
             InviteResponse response = new InviteResponse();
 
-            response.OWN_ENCRYPTS.AddRange(CryptoUtils.ENCRYPTS);
-            response.OWN_SIGNS.AddRange(CryptoUtils.SIGNS);
+            response.OWN_ENCRYPTS.AddRange(MemStorage.ENCRYPTS);
+            response.OWN_SIGNS.AddRange(MemStorage.SIGNS);
 
             var cbor = CBORObject.NewMap()
                 .Add("OWN_ENCRYPTS", CBORObject.NewArray().Add(response.OWN_ENCRYPTS))
@@ -231,20 +231,21 @@ namespace TestAPILayer.Controllers
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
 
             UnsignedTransaction<RegisterRequest> transactionObj =
-               JsonConvert.DeserializeObject<UnsignedTransaction<RegisterRequest>>(rebuiltDataJSON);          
+               JsonConvert.DeserializeObject<UnsignedTransaction<RegisterRequest>>(rebuiltDataJSON);
 
             // servers store DS.PUB + DE.PUB + NONCE
-            CryptoUtils.DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DS_PUB);
-            CryptoUtils.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DE_PUB);
-            CryptoUtils.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
+            MemStorage.DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DS_PUB);
+            MemStorage.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DE_PUB);
+            MemStorage.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wTOKEN);
 
             List<byte[]> SE_PUB = new List<byte[]>();
+            MemStorage.SE_PRIV.Clear();
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
                 ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
                 SE_PUB.Add(key.PublicKey.ToByteArray());
-                CryptoUtils.SE_PRIV.Add(key.ExportECPrivateKey());
+                MemStorage.SE_PRIV.Add(key.ExportECPrivateKey());
             }
 
             var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
@@ -300,19 +301,32 @@ namespace TestAPILayer.Controllers
             UnsignedTransaction<LoginRequest> transactionObj =
                JsonConvert.DeserializeObject<UnsignedTransaction<LoginRequest>>(rebuiltDataJSON);
 
+            MemStorage.Clear();
             // servers unwrap + store KEYS to memory
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
             {
-                CryptoUtils.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WENCRYPTS[i]));
-                CryptoUtils.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WSIGNS[i]));
+                MemStorage.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WENCRYPTS[i]));
+                MemStorage.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WSIGNS[i]));
             }
 
             // servers store DS.PUB + DE.PUB + NONCE
-            CryptoUtils.DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DS_PUB);
-            CryptoUtils.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DE_PUB);
-            CryptoUtils.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
+            MemStorage.DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DS_PUB);
+            MemStorage.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DE_PUB);
+            MemStorage.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
 
-            return Ok(rebuiltDataJSON);
+            List<byte[]> SE_PUB = new List<byte[]>();
+            for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
+            {
+                ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
+                SE_PUB.Add(key.PublicKey.ToByteArray());
+                MemStorage.SE_PRIV.Add(key.ExportECPrivateKey());
+            }
+
+            var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
+
+            Console.WriteLine(cbor.ToJSONString());
+
+            return Ok(cbor.ToJSONString());           
 
         }
     }
