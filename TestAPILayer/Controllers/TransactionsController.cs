@@ -237,6 +237,8 @@ namespace TestAPILayer.Controllers
             CryptoUtils.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wTOKEN);
 
+
+
             return Ok(rebuiltDataJSON);
 
         }

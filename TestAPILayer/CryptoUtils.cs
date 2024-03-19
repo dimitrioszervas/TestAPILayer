@@ -22,6 +22,7 @@ namespace TestAPILayer
 
         public static List<byte[]> ENCRYPTS = new List<byte[]>();
         public static List<byte[]> SIGNS = new List<byte[]>();
+
         public static List<byte[]> SE_PRIV = new List<byte[]>();
 
         public static byte[] DS_PUB;
@@ -219,6 +220,17 @@ namespace TestAPILayer
         public static byte[] CBORBinaryStringToBytes(string s)
         {
             return Convert.FromBase64String(ConvertStringToBase64(s));
+        }
+
+     
+        public static ECDiffieHellmanCng CreateECDH()
+        {
+            using (ECDiffieHellmanCng key = new ECDiffieHellmanCng())
+            {
+                key.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
+                key.HashAlgorithm = CngAlgorithm.Sha256;               
+                return key;
+            }
         }
     }
 }
