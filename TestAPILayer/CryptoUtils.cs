@@ -22,6 +22,8 @@ namespace TestAPILayer
 
         public static List<byte[]> ENCRYPTS = new List<byte[]>();
         public static List<byte[]> SIGNS = new List<byte[]>();
+        public static List<byte[]> SE_PRIV = new List<byte[]>();
+
            
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] src)
         {
