@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using PeterO.Cbor;
 using System.Security.Cryptography;
@@ -107,20 +109,16 @@ namespace TestAPILayer.Controllers
             //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
             //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
-            //Store received OWN_ENCRYPTS & OWN_SIGNS to memory        
+            // servers store KEYS (SIGNS + ENCRYPTS)        
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++) {
                 MemStorage.ENCRYPTS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_ENCRYPTS[i]);
                 MemStorage.SIGNS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_SIGNS[i]);
             }
 
-            InviteResponse response = new InviteResponse();
-
-            response.OWN_ENCRYPTS.AddRange(MemStorage.ENCRYPTS);
-            response.OWN_SIGNS.AddRange(MemStorage.SIGNS);
-
+            // response is OK using OWN_KEYS    
             var cbor = CBORObject.NewMap()
-                .Add("OWN_ENCRYPTS", CBORObject.NewArray().Add(response.OWN_ENCRYPTS))
-                .Add("OWN_SIGNS", CBORObject.NewArray().Add(response.OWN_SIGNS));           
+                .Add("OWN_ENCRYPTS", CBORObject.NewArray().Add(MemStorage.ENCRYPTS))
+                .Add("OWN_SIGNS", CBORObject.NewArray().Add(MemStorage.SIGNS));           
 
             Console.WriteLine(cbor.ToJSONString());
 
@@ -156,15 +154,18 @@ namespace TestAPILayer.Controllers
             MemStorage.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wTOKEN);
 
-            byte[][] SE_PUB = new byte[CryptoUtils.NUM_SERVERS][];
-           
+            // servers create SE[] = create ECDH key pair          
+            byte[][] SE_PUB = new byte[CryptoUtils.NUM_SERVERS][];           
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
                 ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
                 SE_PUB[i] = key.PublicKey.ToByteArray();
+                
+                // servers store SE.PRIV[]
                 MemStorage.SE_PRIV[i] = key.ExportECPrivateKey();
             }
 
+            // response is SE.PUB[] 
             var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
             Console.WriteLine(cbor.ToJSONString());
@@ -207,15 +208,21 @@ namespace TestAPILayer.Controllers
             MemStorage.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].DE_PUB);
             MemStorage.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].NONCE);
 
+            // servers create SE[] = create ECDH key pair
             byte[][] SE_PUB = new byte[CryptoUtils.NUM_SERVERS][];
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
                 ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
                 SE_PUB[i] = key.PublicKey.ToByteArray();
+                
+                //servers store SE.PRIV[]
                 MemStorage.SE_PRIV[i] = key.ExportECPrivateKey();
             }
 
-            var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
+            // response is wTOKEN, SE.PUB[]
+            var cbor = CBORObject.NewMap()
+                .Add("wTOKEN", MemStorage.wTOKEN)
+                .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
             Console.WriteLine(cbor.ToJSONString());
 

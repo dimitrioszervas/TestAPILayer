@@ -10,5 +10,6 @@
         public static byte[] DS_PUB;
         public static byte[] DE_PUB;
         public static byte[] NONCE;
+        public static byte[] wTOKEN;
     }
 }
