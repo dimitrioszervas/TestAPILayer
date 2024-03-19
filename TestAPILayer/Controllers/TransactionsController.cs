@@ -162,8 +162,8 @@ namespace TestAPILayer.Controllers
             string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");            
           
-            UnsignedTransaction<InviteUserRequest> transactionObj =
-               JsonConvert.DeserializeObject<UnsignedTransaction<InviteUserRequest>>(rebuiltDataJSON);
+            UnsignedTransaction<InviteRequest> transactionObj =
+               JsonConvert.DeserializeObject<UnsignedTransaction<InviteRequest>>(rebuiltDataJSON);
                        
             byte[] thresholdCBORBytes = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].encKEY);
             byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);

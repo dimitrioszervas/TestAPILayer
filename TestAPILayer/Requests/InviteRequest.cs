@@ -1,6 +1,6 @@
 ﻿namespace TestAPILayer.Requests
 {
-    public sealed class InviteUserRequest : BaseRequest
+    public sealed class InviteRequest : BaseRequest
     {        
         public string encKEY { get; set; }
         public List<string> ENCRYPTS {  get; set; }
