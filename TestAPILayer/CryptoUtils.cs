@@ -24,7 +24,10 @@ namespace TestAPILayer
         public static List<byte[]> SIGNS = new List<byte[]>();
         public static List<byte[]> SE_PRIV = new List<byte[]>();
 
-           
+        public static byte[] DS_PUB;
+        public static byte[] DE_PUB;
+        public static byte[] NONCE;
+
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] src)
         {
 
