@@ -93,10 +93,13 @@ namespace TestAPILayer.Controllers
             CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
 
             string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
+            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+            
+            //UnsignedTransaction<CreateFolderRequest> transactionObj =
+            //    JsonConvert.DeserializeObject<UnsignedTransaction<CreateFolderRequest>>(rebuiltDataJSON);
+            UnsignedTransaction<InviteUserRequest> transactionObj =
+               JsonConvert.DeserializeObject<UnsignedTransaction<InviteUserRequest>>(rebuiltDataJSON);
 
-            UnsignedTransaction<CreateFolderRequest> transactionObj =
-                JsonConvert.DeserializeObject<UnsignedTransaction<CreateFolderRequest>>(rebuiltDataJSON);
-          
             string threshold = CryptoUtils.ConvertStringToBase64(transactionObj.REQ[0].encKEY);           
 
             byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
@@ -105,11 +108,10 @@ namespace TestAPILayer.Controllers
             byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
             string stringEncKey = CryptoUtils.ByteArrayToString(rebuiltEncKey);
          
-            Console.WriteLine($"Rebuilt encKEY({rebuiltEncKey.Length}): {stringEncKey} ");
-            Console.WriteLine();
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-
-            return Ok(rebuiltDataJSON);  
+            //Console.WriteLine($"Rebuilt encKEY({rebuiltEncKey.Length}): {stringEncKey} ");
+            //Console.WriteLine();            
+           
+            return Ok(rebuiltDataJSON); 
            
         }
     }
