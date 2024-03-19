@@ -71,9 +71,9 @@ namespace TestAPILayer.Controllers
             List<byte[]> encrypts = new List<byte[]>();
             List<byte[]> signs = new List<byte[]>();
             byte[] src = new byte[8];
-            string secretString = "secret";
+            string ownerCode = CryptoUtils.OWNER_CODE;
 
-            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, secretString, CryptoUtils.NUM_SERVERS);
+            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
 
             bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
 
