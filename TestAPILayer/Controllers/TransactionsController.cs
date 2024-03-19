@@ -82,13 +82,13 @@ namespace TestAPILayer.Controllers
             return rebuiltDataJSON;
         }      
 
-        // InviteUser  endpoint
+        // Invite endpoint
         [HttpPost]
-        [Route("InviteUser")]       
+        [Route("Invite")]       
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> InviteUser()
+        public async Task<ActionResult> Invite()
         {
             byte[] requestBytes;
             using (var ms = new MemoryStream())
