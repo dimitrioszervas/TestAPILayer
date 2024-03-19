@@ -166,9 +166,9 @@ namespace TestAPILayer.Controllers
             UnsignedTransaction<InviteRequest> transactionObj =
                JsonConvert.DeserializeObject<UnsignedTransaction<InviteRequest>>(rebuiltDataJSON);
                        
-            byte[] thresholdCBORBytes = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].encKEY);
-            byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
-            byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
+            //byte[] thresholdCBORBytes = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].encKEY);
+            //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
+            //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
             //Store received OWN_ENCRYPTS & OWN_SIGNS to memory
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++) {
@@ -179,9 +179,15 @@ namespace TestAPILayer.Controllers
             InviteResponse response = new InviteResponse();
 
             response.OWN_ENCRYPTS.AddRange(CryptoUtils.ENCRYPTS);
-            response.OWN_SIGNS.AddRange(CryptoUtils.SIGNS);          
+            response.OWN_SIGNS.AddRange(CryptoUtils.SIGNS);
 
-            return Ok(rebuiltDataJSON); 
+            var cbor = CBORObject.NewMap()
+                .Add("OWN_ENCRYPTS", CBORObject.NewArray().Add(response.OWN_ENCRYPTS))
+                .Add("OWN_SIGNS", CBORObject.NewArray().Add(response.OWN_SIGNS));           
+
+            Console.WriteLine(cbor.ToJSONString());
+
+            return Ok(cbor.ToJSONString()); 
            
         }
 
