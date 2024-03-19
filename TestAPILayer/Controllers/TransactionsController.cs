@@ -149,11 +149,6 @@ namespace TestAPILayer.Controllers
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
             byte [][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
-
-            if (transactionShards == null)
-            {
-                return Ok("Received data not verified");
-            }
          
             byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
             
@@ -224,12 +219,7 @@ namespace TestAPILayer.Controllers
             Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
-
-            if (transactionShards == null)
-            {
-                return Ok("Received data not verified");
-            }
+            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);         
 
             byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
 
@@ -285,11 +275,6 @@ namespace TestAPILayer.Controllers
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
             byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
-
-            if (transactionShards == null)
-            {
-                return Ok("Received data not verified");
-            }
 
             byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
 
