@@ -49,24 +49,11 @@ namespace TestAPILayer.Controllers
             return dataShards;          
         }                    
        
-        // Transaction endpoint
-        [HttpPost]
-        [Route("PostTransaction")]       
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> PostTransaction()
+        public static string GetTransactionFromCBOR(byte[] requestBytes)
         {
-            byte[] requestBytes;
-            using (var ms = new MemoryStream())
-            {
-                await Request.Body.CopyToAsync(ms);
-                requestBytes = ms.ToArray();  
-            }           
-           
             // Decode request's CBOR bytes  
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);           
- 
+            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
+
             byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
@@ -82,39 +69,16 @@ namespace TestAPILayer.Controllers
             Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte [][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
+            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
 
-            if (transactionShards == null)
-            {
-                return Ok("Received data not verified");
-            }
-         
             byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
-            
 
             CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
 
             string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-            
-            UnsignedTransaction<CreateFolderRequest> transactionObj =
-                JsonConvert.DeserializeObject<UnsignedTransaction<CreateFolderRequest>>(rebuiltDataJSON);
-         
 
-            string threshold = CryptoUtils.ConvertStringToBase64(transactionObj.REQ[0].encKEY);           
-
-            byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
-                       
-            byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
-            byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
-            string stringEncKey = CryptoUtils.ByteArrayToString(rebuiltEncKey);
-         
-            //Console.WriteLine($"Rebuilt encKEY({rebuiltEncKey.Length}): {stringEncKey} ");
-            //Console.WriteLine();            
-           
-            return Ok(rebuiltDataJSON); 
-           
-        }
+            return rebuiltDataJSON;
+        }      
 
         // InviteUser  endpoint
         [HttpPost]
@@ -131,32 +95,9 @@ namespace TestAPILayer.Controllers
                 requestBytes = ms.ToArray();  
             }           
            
-            // Decode request's CBOR bytes  
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);           
- 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
-            byte[] hmacResultBytes = requestCBOR[1].GetByteString();
+            // Decode request's CBOR bytes   
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes);
 
-            List<byte[]> encrypts = new List<byte[]>();
-            List<byte[]> signs = new List<byte[]>();
-            byte[] src = new byte[8];
-            string ownerCode = CryptoUtils.OWNER_CODE;
-
-            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
-
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
-
-            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
-
-            // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte [][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
-         
-            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
-            
-
-            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
-
-            string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");            
           
             UnsignedTransaction<InviteRequest> transactionObj =
@@ -203,31 +144,8 @@ namespace TestAPILayer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            // Decode request's CBOR bytes  
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
-            byte[] hmacResultBytes = requestCBOR[1].GetByteString();
-
-            List<byte[]> encrypts = new List<byte[]>();
-            List<byte[]> signs = new List<byte[]>();
-            byte[] src = new byte[8];
-            string ownerCode = CryptoUtils.OWNER_CODE;
-
-            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
-
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
-
-            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
-
-            // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);         
-
-            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
-
-            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
-
-            string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
+            // Decode request's CBOR bytes 
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes);
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
 
             UnsignedTransaction<RegisterRequest> transactionObj =
@@ -272,30 +190,7 @@ namespace TestAPILayer.Controllers
             }
 
             // Decode request's CBOR bytes  
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
-            byte[] hmacResultBytes = requestCBOR[1].GetByteString();
-
-            List<byte[]> encrypts = new List<byte[]>();
-            List<byte[]> signs = new List<byte[]>();
-            byte[] src = new byte[8];
-            string ownerCode = CryptoUtils.OWNER_CODE;
-
-            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
-
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
-
-            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
-
-            // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
-
-            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
-
-            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
-
-            string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes);
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
 
             UnsignedTransaction<LoginRequest> transactionObj =
