@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using PeterO.Cbor;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
+using TestAPILayer.Responses;
 
 
 
@@ -28,7 +29,7 @@ namespace TestAPILayer.Controllers
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
-                // we start ENCRYPTS[1] we don't use ENCRYPTS[0]
+                // we start OWN_ENCRYPTS[1] we don't use OWN_ENCRYPTS[0]
                 // we may have more than on shard per server 
                 int encryptsIndex = (i / numShardsPerServer) + 1; 
 
@@ -169,12 +170,17 @@ namespace TestAPILayer.Controllers
             byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
             byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
-            //Store received ENCRYPTS & SIGNS to memory
+            //Store received OWN_ENCRYPTS & OWN_SIGNS to memory
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++) {
-                CryptoUtils.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].ENCRYPTS[i]));
-                CryptoUtils.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].SIGNS[i]));
-            }           
-           
+                CryptoUtils.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_ENCRYPTS[i]));
+                CryptoUtils.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].OWN_SIGNS[i]));
+            }
+
+            InviteResponse response = new InviteResponse();
+
+            response.OWN_ENCRYPTS.AddRange(CryptoUtils.ENCRYPTS);
+            response.OWN_SIGNS.AddRange(CryptoUtils.SIGNS);          
+
             return Ok(rebuiltDataJSON); 
            
         }
