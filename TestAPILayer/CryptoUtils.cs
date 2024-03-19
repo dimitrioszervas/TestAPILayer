@@ -5,13 +5,13 @@ namespace TestAPILayer
 {
     static class CryptoUtils
     {
-        public const string OWNER_CODE = "1234";
-
         private enum KeyType
         {
             SIGN,
             ENCRYPT
         }
+        
+        public const string OWNER_CODE = "1234";
 
         public const int NUM_SERVERS = 3;
 
@@ -19,6 +19,9 @@ namespace TestAPILayer
 
         public const int TAG_SIZE = 16;
         public const int IV_SIZE = 12;
+
+        public static List<byte[]> ENCRYPTS = new List<byte[]>();
+        public static List<byte[]> SIGNS = new List<byte[]>();
            
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] src)
         {
@@ -206,6 +209,11 @@ namespace TestAPILayer
             }
 
             return encoded;
+        }
+
+        public static byte[] CBORBinaryStringToBytes(string s)
+        {
+            return Convert.FromBase64String(ConvertStringToBase64(s));
         }
     }
 }

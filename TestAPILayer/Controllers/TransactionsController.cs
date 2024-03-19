@@ -28,7 +28,7 @@ namespace TestAPILayer.Controllers
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
-                // we start encrypts[1] we don't use encrypts[0]
+                // we start ENCRYPTS[1] we don't use ENCRYPTS[0]
                 // we may have more than on shard per server 
                 int encryptsIndex = (i / numShardsPerServer) + 1; 
 
@@ -164,12 +164,16 @@ namespace TestAPILayer.Controllers
           
             UnsignedTransaction<InviteUserRequest> transactionObj =
                JsonConvert.DeserializeObject<UnsignedTransaction<InviteUserRequest>>(rebuiltDataJSON);
+                       
+            byte[] thresholdCBORBytes = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].encKEY);
+            byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
+            byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
-            //string threshold = CryptoUtils.ConvertStringToBase64(transactionObj.REQ[0].encKEY); 
-            //byte[] thresholdCBORBytes = Convert.FromBase64String(threshold);
-            //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
-            //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
-           
+            //Store received ENCRYPTS & SIGNS to memory
+            for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++) {
+                CryptoUtils.ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].ENCRYPTS[i]));
+                CryptoUtils.SIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].SIGNS[i]));
+            }           
            
             return Ok(rebuiltDataJSON); 
            
