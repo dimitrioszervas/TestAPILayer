@@ -8,7 +8,7 @@
         public string DE_PUB;
         public string NONCE;
 
-        public List<string> WENCRYPTS { get; set; }
-        public List<string> WSIGNS { get; set; }
+        public List<string> wENCRYPTS { get; set; }
+        public List<string> wSIGNS { get; set; }
     }
 }

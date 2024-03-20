@@ -199,8 +199,11 @@ namespace TestAPILayer.Controllers
             // servers unwrap + store KEYS to memory
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
             {
-                MemStorage.ENCRYPTS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WENCRYPTS[i]);
-                MemStorage.SIGNS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].WSIGNS[i]);
+                byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wENCRYPTS[i]);
+                MemStorage.ENCRYPTS[i] = wENCRYPTS;
+
+                byte[] wSIGNS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wSIGNS[i]);
+                MemStorage.SIGNS[i] = wSIGNS;
             }
 
             // servers store DS.PUB + DE.PUB + NONCE
