@@ -20,7 +20,7 @@ namespace TestAPILayer
         public const int TAG_SIZE = 16;
         public const int IV_SIZE = 12; 
 
-        public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] src)
+        public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] nonceIn)
         {
 
             // get raw bytes spans
@@ -28,13 +28,12 @@ namespace TestAPILayer
 
             var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 bytes           
 
-            // ciphertext size is whole data - iv - tag
+            // ciphertext size is whole data - nonce - tag
             var cipherSize = encryptedData.Length - tagSizeBytes;
 
-            // extract iv (nonce) 12 bytes prefix
-            //var iv = encryptedData.Slice(0, ivSizeBytes);
-            byte[] iv = new byte[12];
-            Array.Copy(src, iv, 8);
+            // extract nonce (nonce) 12 bytes prefix          
+            byte[] nonce = new byte[12];
+            Array.Copy(nonceIn, nonce, 8);
 
             // followed by the real ciphertext
             var cipherBytes = encryptedData.Slice(0, cipherSize);
@@ -48,13 +47,13 @@ namespace TestAPILayer
                 ? stackalloc byte[cipherSize]
                 : new byte[cipherSize];
             using var aes = new AesGcm(key);
-            aes.Decrypt(iv, cipherBytes, tag, plainBytes);
+            aes.Decrypt(nonce, cipherBytes, tag, plainBytes);
             return plainBytes.ToArray();
         }
 
         /*
 
-        public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte[] src)
+        public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte[] nonceIn)
         {
             var ciphertext = encryptedData[0..^16];
             var tag = encryptedData[^16..];
@@ -63,10 +62,10 @@ namespace TestAPILayer
             {
                 var aes = new AesGcm(key);
 
-                byte[] iv = new byte[12];
-                Array.Copy(src, iv, 8);
+                byte[] nonce = new byte[12];
+                Array.Copy(nonceIn, nonce, 8);
 
-                aes.Decrypt(iv, ciphertext, tag, decrytedBytes);
+                aes.Decrypt(nonce, ciphertext, tag, decrytedBytes);
             }
             catch (Exception ex)
             {
