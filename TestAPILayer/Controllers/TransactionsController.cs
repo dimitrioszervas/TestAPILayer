@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
 using System.Security.Cryptography;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
-using TestAPILayer.Responses;
 
 
 
@@ -122,8 +119,7 @@ namespace TestAPILayer.Controllers
 
             Console.WriteLine(cbor.ToJSONString());
 
-            return Ok(cbor.ToJSONString()); 
-           
+            return Ok(cbor.ToJSONString());
         }
 
         // Register endpoint
@@ -171,7 +167,6 @@ namespace TestAPILayer.Controllers
             Console.WriteLine(cbor.ToJSONString());
 
             return Ok(cbor.ToJSONString());
-
         }
 
         // Login endpoint
@@ -199,8 +194,7 @@ namespace TestAPILayer.Controllers
             // servers unwrap + store KEYS to memory           
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
             {
-                byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wENCRYPTS[i]);
-                
+                byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wENCRYPTS[i]);                
                 MemStorage.ENCRYPTS[i] = CryptoUtils.Unwrap(wENCRYPTS, MemStorage.NONCE);
 
                 byte[] wSIGNS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wSIGNS[i]);
@@ -230,8 +224,7 @@ namespace TestAPILayer.Controllers
 
             Console.WriteLine(cbor.ToJSONString());
 
-            return Ok(cbor.ToJSONString());           
-
+            return Ok(cbor.ToJSONString());     
         }
     }
 }
