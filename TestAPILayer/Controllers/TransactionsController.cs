@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
@@ -77,7 +79,16 @@ namespace TestAPILayer.Controllers
             string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
 
             return rebuiltDataJSON;
-        }      
+        }
+
+        private static HttpResponseMessage ReturnBytes(byte[] bytes)
+        {
+            HttpResponseMessage result = new HttpResponseMessage(HttpStatusCode.OK);
+            result.Content = new ByteArrayContent(bytes);
+            result.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+            return result;
+        }
 
         // Invite endpoint
         [HttpPost]
@@ -85,7 +96,7 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> Invite()
+        public async Task<HttpResponseMessage> Invite()
         {
             byte[] requestBytes;
             using (var ms = new MemoryStream())
@@ -117,9 +128,7 @@ namespace TestAPILayer.Controllers
                 .Add("OWN_ENCRYPTS", CBORObject.NewArray().Add(MemStorage.ENCRYPTS))
                 .Add("OWN_SIGNS", CBORObject.NewArray().Add(MemStorage.SIGNS));           
 
-            Console.WriteLine(cbor.ToJSONString());
-
-            return Ok(cbor.ToJSONString());
+            return ReturnBytes(cbor.EncodeToBytes());
         }
 
         // Register endpoint
@@ -128,7 +137,7 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> Register()
+        public async Task<HttpResponseMessage> Register()
         {
             byte[] requestBytes;
             using (var ms = new MemoryStream())
@@ -164,9 +173,7 @@ namespace TestAPILayer.Controllers
             // response is SE.PUB[] 
             var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
-            Console.WriteLine(cbor.ToJSONString());
-
-            return Ok(cbor.ToJSONString());
+            return ReturnBytes(cbor.EncodeToBytes());
         }
 
         // Login endpoint
@@ -175,7 +182,7 @@ namespace TestAPILayer.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> Login()
+        public async Task<HttpResponseMessage> Login()
         {
             byte[] requestBytes;
             using (var ms = new MemoryStream())
@@ -222,9 +229,7 @@ namespace TestAPILayer.Controllers
                 .Add("wTOKEN", MemStorage.wTOKEN)
                 .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
-            Console.WriteLine(cbor.ToJSONString());
-
-            return Ok(cbor.ToJSONString());     
+            return ReturnBytes(cbor.EncodeToBytes());
         }
     }
 }
