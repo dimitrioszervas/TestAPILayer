@@ -1,4 +1,9 @@
-﻿using System.Security.Cryptography;
+﻿using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Security;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace TestAPILayer
@@ -223,5 +228,17 @@ namespace TestAPILayer
             }
         }
 
+        public static byte[] Unwrap(byte[] wrappedData, byte[] key)
+        {
+            ICipherParameters keyParam = new KeyParameter(key); 
+           
+            var symmetricBlockCipher = new AesEngine();
+            Rfc3394WrapEngine wrapEngine = new Rfc3394WrapEngine(symmetricBlockCipher);       
+
+            wrapEngine.Init(false, keyParam);
+            var unwrappedData = wrapEngine.Unwrap(wrappedData, 0, wrappedData.Length);
+
+            return unwrappedData;            
+        }
     }
 }

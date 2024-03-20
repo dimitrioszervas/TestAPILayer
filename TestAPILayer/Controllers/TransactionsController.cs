@@ -196,16 +196,15 @@ namespace TestAPILayer.Controllers
             UnsignedTransaction<LoginRequest> transactionObj =
                JsonConvert.DeserializeObject<UnsignedTransaction<LoginRequest>>(rebuiltDataJSON);
 
-            // servers unwrap + store KEYS to memory
-            byte [] iv = new byte[12];
+            // servers unwrap + store KEYS to memory           
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
             {
                 byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wENCRYPTS[i]);
                 
-                MemStorage.ENCRYPTS[i] = CryptoUtils.Decrypt(wENCRYPTS, MemStorage.NONCE, iv);
+                MemStorage.ENCRYPTS[i] = CryptoUtils.Unwrap(wENCRYPTS, MemStorage.NONCE);
 
                 byte[] wSIGNS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wSIGNS[i]);
-                MemStorage.SIGNS[i] = CryptoUtils.Decrypt(wSIGNS, MemStorage.NONCE, iv);
+                MemStorage.SIGNS[i] = CryptoUtils.Unwrap(wSIGNS, MemStorage.NONCE);
             }
 
             // servers store DS.PUB + DE.PUB + NONCE
