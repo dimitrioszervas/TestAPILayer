@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using PeterO.Cbor;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
 
@@ -170,11 +169,11 @@ namespace TestAPILayer.Controllers
             byte[][] SE_PUB = new byte[CryptoUtils.NUM_SERVERS][];           
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
-                ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
-                SE_PUB[i] = key.PublicKey.ToByteArray();
+                //ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
+                SE_PUB[i] = new byte[32];// key.PublicKey.ToByteArray();
                 
                 // servers store SE.PRIV[]
-                MemStorage.SE_PRIV[i] = key.ExportECPrivateKey();
+                MemStorage.SE_PRIV[i] = new byte[32];// key.ExportECPrivateKey();
             }
 
             // response is SE.PUB[] 
@@ -208,11 +207,11 @@ namespace TestAPILayer.Controllers
             // servers unwrap + store KEYS to memory           
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
             {
-                byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wENCRYPTS[i]);                
-                MemStorage.ENCRYPTS[i] = CryptoUtils.Unwrap(wENCRYPTS, MemStorage.NONCE);
+                byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wENCRYPTS[i]);
+                MemStorage.ENCRYPTS[i] = wENCRYPTS;// CryptoUtils.Unwrap(wENCRYPTS, MemStorage.NONCE);
 
                 byte[] wSIGNS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].wSIGNS[i]);
-                MemStorage.SIGNS[i] = CryptoUtils.Unwrap(wSIGNS, MemStorage.NONCE);
+                MemStorage.SIGNS[i] = wSIGNS;// CryptoUtils.Unwrap(wSIGNS, MemStorage.NONCE);
             }
 
             // servers store DS.PUB + DE.PUB + NONCE
@@ -224,11 +223,11 @@ namespace TestAPILayer.Controllers
             byte[][] SE_PUB = new byte[CryptoUtils.NUM_SERVERS][];
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
-                ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
-                SE_PUB[i] = key.PublicKey.ToByteArray();
-                
+                //ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
+                SE_PUB[i] = new byte[32];// key.PublicKey.ToByteArray();
+
                 //servers store SE.PRIV[]
-                MemStorage.SE_PRIV[i] = key.ExportECPrivateKey();
+                MemStorage.SE_PRIV[i] = new byte[32];// key.ExportECPrivateKey();
             }
 
             // response is wTOKEN, SE.PUB[]
