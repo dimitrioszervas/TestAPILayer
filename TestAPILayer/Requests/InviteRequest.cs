@@ -4,6 +4,6 @@
     {             
         public List<string> ENCRYPTS {  get; set; }
         public List<string> SIGNS { get; set; }
-        public string inviteID { get; set; }
+        public string deviceID { get; set; }
     }
 }
