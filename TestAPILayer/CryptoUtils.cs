@@ -8,8 +8,15 @@ using System.Text;
 
 namespace TestAPILayer
 {
+    
     static class CryptoUtils
     {
+        public class KeyPair
+        {
+            public byte[] PublicKey {  get; set; }
+            public byte[] PrivateKey {  get; set; }
+        }
+
         private enum KeyType
         {
             SIGN,
@@ -218,14 +225,17 @@ namespace TestAPILayer
         }
 
      
-        public static ECDiffieHellmanCng CreateECDH()
+        public static KeyPair CreateECDH()
         {
-            using (ECDiffieHellmanCng key = new ECDiffieHellmanCng())
-            {
-                key.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
-                key.HashAlgorithm = CngAlgorithm.Sha256;               
-                return key;
-            }
+            var ecdh = new ECDiffieHellmanCng(CngKey.Create(CngAlgorithm.ECDiffieHellmanP256, null, new CngKeyCreationParameters { ExportPolicy = CngExportPolicies.AllowPlaintextExport }));
+            var privateKey = ecdh.Key.Export(CngKeyBlobFormat.EccPrivateBlob);
+            var publickey = ecdh.Key.Export(CngKeyBlobFormat.EccPublicBlob);
+            KeyPair keyPair = new KeyPair();
+
+            keyPair.PublicKey = publickey;
+            keyPair.PrivateKey = privateKey;
+
+            return keyPair;
         }
 
         public static byte[] Unwrap(byte[] wrappedData, byte[] key)
