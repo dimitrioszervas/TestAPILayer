@@ -163,7 +163,7 @@ namespace TestAPILayer.Controllers
             MemStorage.DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB);
             MemStorage.DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
             MemStorage.NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
-            byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
+            MemStorage.wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
 
             // servers create SE[] = create ECDH key pair          
             byte[][] SE_PUB = new byte[CryptoUtils.NUM_SERVERS][];           
