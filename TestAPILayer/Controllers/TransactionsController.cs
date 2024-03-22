@@ -18,15 +18,19 @@ namespace TestAPILayer.Controllers
 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
-        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, List<byte[]> encrypts, byte[] src)
+        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, ref byte[] src)
         {      
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);         
           
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the SRC array 
             int numShards = shardsCBOR.Values.Count - 1;
-            int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;   
-                       
+            int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;
+
+            src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();          
+
+            byte[][] encrypts = MemStorage.KEYS[CryptoUtils.ByteArrayToString(src)].ENCRYPTS;
+
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
@@ -49,27 +53,23 @@ namespace TestAPILayer.Controllers
             return dataShards;          
         }                    
        
-        public static string GetTransactionFromCBOR(byte[] requestBytes)
+        public static string GetTransactionFromCBOR(byte[] requestBytes, ref byte[] src)
         {
             // Decode request's CBOR bytes  
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
             byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
-
-            List<byte[]> encrypts = new List<byte[]>();
-            List<byte[]> signs = new List<byte[]>();
-            byte[] src = new byte[8];
-            string ownerCode = CryptoUtils.OWNER_CODE;
-
-            CryptoUtils.GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
+           
+            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            
+            byte[][] signs = MemStorage.KEYS[CryptoUtils.ByteArrayToString(src)].SIGNS; 
 
             bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
 
             Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, encrypts, src);
 
             byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
 
@@ -107,13 +107,16 @@ namespace TestAPILayer.Controllers
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();  
-            }           
-           
-            // Decode request's CBOR bytes   
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes);
+            }
 
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");            
-          
+            // Decode request's CBOR bytes   
+            byte[] src = new byte[CryptoUtils.SRC_SIZE];
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
+
+            Console.WriteLine("Invite:");
+            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+            Console.WriteLine();
+
             InviteRequest transactionObj =
                JsonConvert.DeserializeObject<InviteRequest>(rebuiltDataJSON);
 
@@ -121,16 +124,16 @@ namespace TestAPILayer.Controllers
             //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
             //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
-            // servers store KEYS (SIGNS + ENCRYPTS)        
+            // servers store KEYS (SIGNS + ENCRYPTS)           
+            string inviteID = CryptoUtils.ByteArrayToString(CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID));
+            MemStorage.KEYS.TryAdd(inviteID, new MemStorage.Keys());
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++) {
-                MemStorage.ENCRYPTS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.ENCRYPTS[i]);
-                MemStorage.SIGNS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.SIGNS[i]);
-            }
+                MemStorage.KEYS[inviteID].ENCRYPTS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.ENCRYPTS[i]);
+                MemStorage.KEYS[inviteID].SIGNS[i] = CryptoUtils.CBORBinaryStringToBytes(transactionObj.SIGNS[i]);
+            }           
 
             // response is OK using OWN_KEYS    
-            var cbor = CBORObject.NewMap()
-                .Add("OWN_ENCRYPTS", CBORObject.NewArray().Add(MemStorage.ENCRYPTS))
-                .Add("OWN_SIGNS", CBORObject.NewArray().Add(MemStorage.SIGNS));
+            var cbor = CBORObject.NewMap().Add("INVITE", "SUCCESS");
 
             //return Ok(cbor.ToJSONString());
             //return ReturnBytes(cbor.EncodeToBytes());
@@ -152,9 +155,13 @@ namespace TestAPILayer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            // Decode request's CBOR bytes 
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes);
+
+            // Decode request's CBOR bytes   
+            byte[] src = new byte[CryptoUtils.SRC_SIZE];
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src);
+            Console.WriteLine("Register:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+            Console.WriteLine();
 
             RegisterRequest transactionObj =
                JsonConvert.DeserializeObject<RegisterRequest>(rebuiltDataJSON);
@@ -196,22 +203,27 @@ namespace TestAPILayer.Controllers
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
             }
+                       
 
-            // Decode request's CBOR bytes  
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes);
+            // Decode request's CBOR bytes
+            byte[] src = new byte[CryptoUtils.SRC_SIZE]; 
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
+            Console.WriteLine("Login");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+            Console.WriteLine();
 
             LoginRequest transactionObj =
                JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
 
-            // servers unwrap + store KEYS to memory           
+            // servers unwrap + store KEYS to memory
+             
             for (int i = 0; i <= CryptoUtils.NUM_SERVERS; i++)
             {
                 byte[] wENCRYPTS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[i]);
-                MemStorage.ENCRYPTS[i] = wENCRYPTS;// CryptoUtils.Unwrap(wENCRYPTS, MemStorage.NONCE);
+                MemStorage.KEYS[CryptoUtils.ByteArrayToString(src)].ENCRYPTS[i] = wENCRYPTS;// CryptoUtils.Unwrap(wENCRYPTS, MemStorage.NONCE);
 
                 byte[] wSIGNS = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[i]);
-                MemStorage.SIGNS[i] = wSIGNS;// CryptoUtils.Unwrap(wSIGNS, MemStorage.NONCE);
+                MemStorage.KEYS[CryptoUtils.ByteArrayToString(src)].SIGNS[i] = wSIGNS;// CryptoUtils.Unwrap(wSIGNS, MemStorage.NONCE);
             }
 
             // servers store DS.PUB + DE.PUB + NONCE

@@ -1,9 +1,17 @@
-﻿namespace TestAPILayer
-{
+﻿using System.Collections.Concurrent;
+
+namespace TestAPILayer
+{  
     public static class MemStorage
     {
-        public static byte[][] ENCRYPTS = new byte[CryptoUtils.NUM_SERVERS + 1][];
-        public static byte[][] SIGNS = new byte[CryptoUtils.NUM_SERVERS + 1][];
+        public class Keys
+        {
+            public byte[][] ENCRYPTS = new byte[CryptoUtils.NUM_KEYS][];
+            public byte[][] SIGNS = new byte[CryptoUtils.NUM_KEYS][];
+        }
+
+        public static ConcurrentDictionary<string, Keys> KEYS = new ConcurrentDictionary<string, Keys>();       
+        
 
         public static byte[][] SE_PRIV = new byte[CryptoUtils.NUM_SERVERS][];
 

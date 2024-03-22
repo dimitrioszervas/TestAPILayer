@@ -26,11 +26,14 @@ namespace TestAPILayer
         public const string OWNER_CODE = "1234";
 
         public const int NUM_SERVERS = 3;
+        public const int NUM_KEYS = NUM_SERVERS + 1;
 
         public const int KEY_SIZE = 32;
 
         public const int TAG_SIZE = 16;
-        public const int IV_SIZE = 12; 
+        public const int IV_SIZE = 12;
+
+        public const int SRC_SIZE = 8;
 
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] nonceIn)
         {
@@ -131,9 +134,9 @@ namespace TestAPILayer
             return sb.ToString();
         }
 
-        private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
+        private static byte[][] GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
         {
-            List<byte[]> keys = new List<byte[]>();
+            byte[][] keys = new byte[NUM_KEYS][];
             byte[] salt, info;
 
             if (type == KeyType.SIGN)
@@ -151,13 +154,13 @@ namespace TestAPILayer
             for (int i = 0; i <= n; i++)
             {
                 byte[] key = HKDF.DeriveKey(HashAlgorithmName.SHA256, baseKey, KEY_SIZE, salt, info);
-                keys.Add(key);
+                keys[i] = key;
             }
 
             return keys;
         }
 
-        public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, string secretString, int n)
+        public static void GenerateKeys(ref byte[][] encrypts, ref byte[][] signs, ref byte[] srcOut, string secretString, int n)
         {
             string saltString = "";
 
@@ -166,7 +169,7 @@ namespace TestAPILayer
 
             byte[] src = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                         ikm: secret,
-                                        outputLength: 8,
+                                        outputLength: SRC_SIZE,
                                         salt: salt,
                                         info: Encoding.UTF8.GetBytes("src"));
 
@@ -249,6 +252,26 @@ namespace TestAPILayer
             var unwrappedData = wrapEngine.Unwrap(wrappedData, 0, wrappedData.Length);
 
             return unwrappedData;            
+        }
+
+        public static void GenerateOwnerKeys()
+        {
+            byte[][] encrypts = new byte[NUM_KEYS][];
+            byte[][] signs = new byte[NUM_KEYS][];
+            byte[] src = new byte[SRC_SIZE];
+            string ownerCode = OWNER_CODE;
+
+            GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
+
+            string ownerID = CryptoUtils.ByteArrayToString(src);
+            MemStorage.KEYS.TryAdd(ownerID, new MemStorage.Keys());
+            for (int i = 0; i < NUM_KEYS; i++)
+            {
+                MemStorage.KEYS[ownerID].ENCRYPTS[i] = encrypts[i];
+                MemStorage.KEYS[ownerID].SIGNS[i] = signs[i];
+            }
+
+           
         }
     }
 }
