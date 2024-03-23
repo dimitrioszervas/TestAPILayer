@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TestAPILayer
 {
-    public sealed class KeyStorage
+    public sealed class KeyStore
     {
         private class Keys
         {
@@ -23,10 +23,10 @@ namespace TestAPILayer
         private ConcurrentDictionary<string, Keys> _KEYS = new ConcurrentDictionary<string, Keys>();
 
         // This is required to make the Servers singleton class thread safe
-        private static readonly Lazy<KeyStorage> _lazy = new Lazy<KeyStorage>(() => new KeyStorage());
+        private static readonly Lazy<KeyStore> _lazy = new Lazy<KeyStore>(() => new KeyStore());
 
         // Static instance of the Servers class
-        public static KeyStorage Instance { get { return _lazy.Value; } }
+        public static KeyStore Inst { get { return _lazy.Value; } }
 
         private string ByteArrayToString(byte[] bytes)
         {

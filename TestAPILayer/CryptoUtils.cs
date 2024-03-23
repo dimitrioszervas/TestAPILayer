@@ -262,8 +262,8 @@ namespace TestAPILayer
 
             GenerateKeys(ref encrypts, ref signs, ref ownerID, ownerCode, NUM_SERVERS);
 
-            KeyStorage.Instance.StoreENCRYPTS(ownerID, encrypts);
-            KeyStorage.Instance.StoreSIGNS(ownerID, signs);
+            KeyStore.Inst.StoreENCRYPTS(ownerID, encrypts);
+            KeyStore.Inst.StoreSIGNS(ownerID, signs);
         }
     }
 }
