@@ -125,8 +125,7 @@ namespace TestAPILayer
             aes.Encrypt(iv, plainBytes, ciphertext, tag);
         }
 
-
-        public static string ByteArrayToString(byte[] bytes)
+        public static string ByteArrayToStringDebug(byte[] bytes)
         {
             var sb = new StringBuilder("[");
             sb.Append(string.Join(", ", bytes));
@@ -134,9 +133,9 @@ namespace TestAPILayer
             return sb.ToString();
         }
 
-        private static byte[][] GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
+        private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
         {
-            byte[][] keys = new byte[NUM_KEYS][];
+            List<byte[]> keys = new List<byte[]>();
             byte[] salt, info;
 
             if (type == KeyType.SIGN)
@@ -154,13 +153,13 @@ namespace TestAPILayer
             for (int i = 0; i <= n; i++)
             {
                 byte[] key = HKDF.DeriveKey(HashAlgorithmName.SHA256, baseKey, KEY_SIZE, salt, info);
-                keys[i] = key;
+                keys.Add(key);
             }
 
             return keys;
         }
 
-        public static void GenerateKeys(ref byte[][] encrypts, ref byte[][] signs, ref byte[] srcOut, string secretString, int n)
+        public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, string secretString, int n)
         {
             string saltString = "";
 
@@ -256,22 +255,15 @@ namespace TestAPILayer
 
         public static void GenerateOwnerKeys()
         {
-            byte[][] encrypts = new byte[NUM_KEYS][];
-            byte[][] signs = new byte[NUM_KEYS][];
-            byte[] src = new byte[SRC_SIZE];
+            List<byte[]> encrypts = new List<byte[]>();
+            List<byte[]> signs = new List<byte[]>();
+            byte[] ownerID = new byte[SRC_SIZE];
             string ownerCode = OWNER_CODE;
 
-            GenerateKeys(ref encrypts, ref signs, ref src, ownerCode, CryptoUtils.NUM_SERVERS);
+            GenerateKeys(ref encrypts, ref signs, ref ownerID, ownerCode, NUM_SERVERS);
 
-            string ownerID = CryptoUtils.ByteArrayToString(src);
-            MemStorage.KEYS.TryAdd(ownerID, new MemStorage.Keys());
-            for (int i = 0; i < NUM_KEYS; i++)
-            {
-                MemStorage.KEYS[ownerID].ENCRYPTS[i] = encrypts[i];
-                MemStorage.KEYS[ownerID].SIGNS[i] = signs[i];
-            }
-
-           
+            KeyStorage.Instance.StoreENCRYPTS(ownerID, encrypts);
+            KeyStorage.Instance.StoreSIGNS(ownerID, signs);
         }
     }
 }
