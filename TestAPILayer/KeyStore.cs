@@ -155,7 +155,7 @@ namespace TestAPILayer
                 _KEYS.TryAdd(srcID, new Keys());
             }
             _KEYS[srcID].NONCE = new byte[NONCE.Length];
-            Array.Copy(NONCE, _KEYS[srcID].DE_PUB, NONCE.Length);
+            Array.Copy(NONCE, _KEYS[srcID].NONCE, NONCE.Length);
         }
 
         public void StoreWTOKEN(byte[] SRC, byte[] wTOKEN)
@@ -166,7 +166,7 @@ namespace TestAPILayer
                 _KEYS.TryAdd(srcID, new Keys());
             }
             _KEYS[srcID].wTOKEN = new byte[wTOKEN.Length];
-            Array.Copy(wTOKEN, _KEYS[srcID].DE_PUB, wTOKEN.Length);
+            Array.Copy(wTOKEN, _KEYS[srcID].wTOKEN, wTOKEN.Length);
         }
 
 
