@@ -124,7 +124,7 @@ namespace TestAPILayer.Controllers
             //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
             //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
-            // servers store _KEYS (SIGNS + ENCRYPTS)           
+            // servers store KEYS (SIGNS + ENCRYPTS)           
             byte [] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
             KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.ENCRYPTS);
             KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.SIGNS);                
