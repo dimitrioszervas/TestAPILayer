@@ -152,7 +152,6 @@ namespace TestAPILayer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-
             // Decode request's CBOR bytes   
             byte[] src = new byte[CryptoUtils.SRC_SIZE];
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src);
@@ -229,7 +228,7 @@ namespace TestAPILayer.Controllers
                 SIGNS.Add(unwrapSIGN);
             }
             KeyStore.Inst.StoreENCRYPTS(src, ENCRYPTS);
-            KeyStore.Inst.StoreENCRYPTS(src, SIGNS);
+            KeyStore.Inst.StoreSIGNS(src, SIGNS);
 
             // servers store DS.PUB + DE.PUB + NONCE
             KeyStore.Inst.StoreDS_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
