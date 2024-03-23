@@ -34,7 +34,7 @@ namespace TestAPILayer.Controllers
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
-                // we start ENCRYPTS[1] we don't use ENCRYPTS[0]
+                // we start invENCRYPTS[1] we don't use invENCRYPTS[0]
                 // we may have more than on shard per server 
                 int encryptsIndex = (i / numShardsPerServer) + 1; 
 
@@ -124,10 +124,10 @@ namespace TestAPILayer.Controllers
             //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
             //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
 
-            // servers store KEYS (SIGNS + ENCRYPTS)           
+            // servers store KEYS (invSIGNS + invENCRYPTS)           
             byte [] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
-            KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.ENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.SIGNS);                
+            KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.invENCRYPTS);
+            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.invSIGNS);                
 
             // response is OK using OWN_KEYS    
             var cbor = CBORObject.NewMap().Add("INVITE", "SUCCESS");

@@ -2,8 +2,8 @@
 {
     public sealed class InviteRequest : BaseRequest
     {             
-        public List<string> ENCRYPTS {  get; set; }
-        public List<string> SIGNS { get; set; }
+        public List<string> invENCRYPTS {  get; set; }
+        public List<string> invSIGNS { get; set; }
         public string inviteID { get; set; }
     }
 }
