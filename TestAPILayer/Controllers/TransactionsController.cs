@@ -120,16 +120,12 @@ namespace TestAPILayer.Controllers
             InviteRequest transactionObj =
                JsonConvert.DeserializeObject<InviteRequest>(rebuiltDataJSON);
 
-            //byte[] thresholdCBORBytes = CryptoUtils.CBORBinaryStringToBytes(transactionObj.REQ[0].encKEY);
-            //byte[][] thresholdShards = GetShardsFromCBOR(thresholdCBORBytes, encrypts, src);
-            //byte [] rebuiltEncKey = ReedSolomonUtils.RebuildDataUsingReeedSolomon(thresholdShards);
-
-            // servers store KEYS (invSIGNS + invENCRYPTS)           
-            byte [] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
+            // servers store invite.KEYS (invite.SIGNS + invite.ENCRYPTS) using invite.id as the lookup          
+            byte[] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
             KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.invENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.invSIGNS);                
+            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.invSIGNS);
 
-            // response is OK using OWN_KEYS    
+            // response is just OK, but any response data must be encrypted + signed using owner.KEYS
             var cbor = CBORObject.NewMap().Add("INVITE", "SUCCESS");
 
             //return Ok(cbor.ToJSONString());
