@@ -30,12 +30,12 @@ namespace TestAPILayer
         public const int NUM_SERVERS = 3;
         public const int NUM_KEYS = NUM_SERVERS + 1;
 
-        public const int KEY_SIZE = 32;
+        public const int KEY_SIZE32 = 32;
 
         public const int TAG_SIZE = 16;
         public const int IV_SIZE = 12;
 
-        public const int SRC_SIZE = 8;
+        public const int SRC_SIZE8 = 8;
 
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] nonceIn)
         {
@@ -145,6 +145,24 @@ namespace TestAPILayer
             return key;
         }
 
+        public static byte[] DeriveKeyHKDF32(byte[] ikm, byte[] salt, byte[] info)
+        {
+            byte[] key = DeriveKeyHKDF(ikm: ikm,
+                                       outputLength: 32,
+                                       salt: salt,
+                                       info: info);
+            return key;
+        }
+
+        public static byte[] DeriveKeyHKDF8(byte[] ikm, byte[] salt, byte[] info)
+        {
+            byte[] key = DeriveKeyHKDF(ikm: ikm,
+                                       outputLength: 8,
+                                       salt: salt,
+                                       info: info);
+            return key;
+        }
+
         private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
         {
             List<byte[]> keys = new List<byte[]>();
@@ -164,7 +182,7 @@ namespace TestAPILayer
 
             for (int i = 0; i <= n; i++)
             {
-                byte[] key = DeriveKeyHKDF(baseKey, KEY_SIZE, salt, info);
+                byte[] key = DeriveKeyHKDF(baseKey, KEY_SIZE32, salt, info);
                 keys.Add(key);
             }
 
@@ -173,13 +191,13 @@ namespace TestAPILayer
 
         public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, byte [] secret, byte[] salt, int n)
         {    
-            byte[] src = DeriveKeyHKDF(secret, SRC_SIZE, salt, Encoding.UTF8.GetBytes("src"));
+            byte[] src = DeriveKeyHKDF8(secret, salt, Encoding.UTF8.GetBytes("src"));
 
             salt = src;
 
-            byte[] sign = DeriveKeyHKDF(secret, KEY_SIZE, salt, Encoding.UTF8.GetBytes("sign"));           
+            byte[] sign = DeriveKeyHKDF32(secret, salt, Encoding.UTF8.GetBytes("sign"));           
 
-            byte[] encrypt = DeriveKeyHKDF(secret, KEY_SIZE, salt, Encoding.UTF8.GetBytes("encrypt"));           
+            byte[] encrypt = DeriveKeyHKDF32(secret, salt, Encoding.UTF8.GetBytes("encrypt"));           
 
             encrypts = GenerateNKeys(n, salt, KeyType.ENCRYPT, encrypt);
             signs = GenerateNKeys(n, salt, KeyType.SIGN, sign);
@@ -251,7 +269,7 @@ namespace TestAPILayer
         {
             List<byte[]> encrypts = new List<byte[]>();
             List<byte[]> signs = new List<byte[]>();
-            byte[] ownerID = new byte[SRC_SIZE];
+            byte[] ownerID = new byte[SRC_SIZE8];
             string ownerCode = OWNER_CODE;
 
             string saltString = "";

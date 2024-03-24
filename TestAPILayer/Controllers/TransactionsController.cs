@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
+using System.ComponentModel;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
 
@@ -24,7 +26,7 @@ namespace TestAPILayer.Controllers
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);         
           
             // allocate memory for the data shards byte matrix
-            // Last element in the string array is not a shard but the SRC array 
+            // Last element in the string array is not a shard but the loginID array 
             int numShards = shardsCBOR.Values.Count - 1;
             int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;
 
@@ -111,7 +113,7 @@ namespace TestAPILayer.Controllers
             }
 
             // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE];
+            byte[] src = new byte[CryptoUtils.SRC_SIZE8];
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
 
             Console.WriteLine("Invite:");
@@ -150,8 +152,8 @@ namespace TestAPILayer.Controllers
             }
 
             // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src);
+            byte[] inviteID = new byte[CryptoUtils.SRC_SIZE8];
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref inviteID);
             Console.WriteLine("Register:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -160,13 +162,15 @@ namespace TestAPILayer.Controllers
                JsonConvert.DeserializeObject<RegisterRequest>(rebuiltDataJSON);
 
             // servers store DS PUB + DE.PUB + NONCE + wTOKEN
-            KeyStore.Inst.StoreDS_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
-            KeyStore.Inst.StoreDE_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB));
-            KeyStore.Inst.StoreNONCE(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));
-            KeyStore.Inst.StoreWTOKEN(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN));
+            byte[] DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB);
+            byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
+            byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
+            byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
 
-            // servers derive login.SECRET using ECDH (DE.PUB, SE.PRIV[]
-
+            KeyStore.Inst.StoreDS_PUB(inviteID, DS_PUB);
+            KeyStore.Inst.StoreDE_PUB(inviteID, DE_PUB);
+            KeyStore.Inst.StoreNONCE(inviteID, NONCE);
+            KeyStore.Inst.StoreWTOKEN(inviteID, wTOKEN);                       
 
             // servers create SE[] = create ECDH key pair          
             List<byte[]> SE_PUB = new List<byte[]>();
@@ -178,8 +182,26 @@ namespace TestAPILayer.Controllers
 
                 SE_PRIV.Add(key.PrivateKey);
             }
+
             // servers store SE.PRIV[]
-            KeyStore.Inst.StoreSE_PRIV(src, SE_PRIV);
+            KeyStore.Inst.StoreSE_PRIV(inviteID, SE_PRIV);
+
+            // servers derive login.SECRET using ECDH (DE.PUB, SE.PRIV[])          
+            //byte[] loginSECRET = Encoding.UTF8.GetBytes("login.SECRET");          
+            byte[] loginSECRET = CryptoUtils.DeriveKeyHKDF32(DE_PUB,
+                                                             SE_PRIV[0],
+                                                             Encoding.UTF8.GetBytes("login.SECRET"));
+
+            // servers derive + store login.KEYS(login.SIGNS + login.ENCRYPTS) for invite.id
+            List<byte[]> loginENCRYPTS = new List<byte[]>();
+            List<byte[]> loginSIGNS = new List<byte[]>();
+            byte[] loginID = new byte[CryptoUtils.SRC_SIZE8];
+            byte[] salt = Encoding.UTF8.GetBytes("");
+
+            CryptoUtils.GenerateKeys(ref loginENCRYPTS, ref loginSIGNS, ref loginID, loginSECRET, salt, CryptoUtils.NUM_SERVERS);
+
+            KeyStore.Inst.StoreLoginENCRYPTS(inviteID, loginENCRYPTS);
+            KeyStore.Inst.StoreLoginSIGNS(inviteID, loginSIGNS);
 
             // response is SE.PUB[] 
             var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
@@ -204,7 +226,7 @@ namespace TestAPILayer.Controllers
                        
 
             // Decode request's CBOR bytes
-            byte[] src = new byte[CryptoUtils.SRC_SIZE]; 
+            byte[] src = new byte[CryptoUtils.SRC_SIZE8]; 
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
             Console.WriteLine("Login");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");

@@ -12,6 +12,8 @@ namespace TestAPILayer
         {
             public List<byte[]> ENCRYPTS { get; set; } = new List<byte[]>();
             public List<byte[]> SIGNS { get; set; } = new List<byte[]>();
+            public List<byte[]> loginENCRYPTS { get; set; } = new List<byte[]>();
+            public List<byte[]> loginSIGNS { get; set; } = new List<byte[]>();
 
             public List<byte[]> SE_PRIV { get; set; } = new List<byte[]>();
 
@@ -211,6 +213,48 @@ namespace TestAPILayer
         {
             string srcID = ByteArrayToString(SRC);
             return _KEYS[srcID].DE_PUB;
+        }
+
+        public void StoreLoginENCRYPTS(byte[] SRC, List<byte[]> loginENCRYPTS)
+        {
+            string srcID = ByteArrayToString(SRC);
+
+            if (!_KEYS.ContainsKey(srcID))
+            {
+                _KEYS.TryAdd(srcID, new Keys());
+            }
+            _KEYS[srcID].loginENCRYPTS.Clear();
+            for (int i = 0; i < loginENCRYPTS.Count; i++)
+            {
+                _KEYS[srcID].loginENCRYPTS.Add(loginENCRYPTS[i]);
+            }
+        }
+
+        public void StoreLoginSIGNS(byte[] SRC, List<byte[]> loginSIGNS)
+        {
+            string srcID = ByteArrayToString(SRC);
+
+            if (!_KEYS.ContainsKey(srcID))
+            {
+                _KEYS.TryAdd(srcID, new Keys());
+            }
+            _KEYS[srcID].loginSIGNS.Clear();
+            for (int i = 0; i < loginSIGNS.Count; i++)
+            {
+                _KEYS[srcID].loginSIGNS.Add(loginSIGNS[i]);
+            }
+        }
+
+        public List<byte[]> GetLoginENCRYPTS(byte[] SRC)
+        {
+            string srcID = ByteArrayToString(SRC);
+            return _KEYS[srcID].loginENCRYPTS;
+        }
+
+        public List<byte[]> GetLoginSIGNS(byte[] SRC)
+        {
+            string srcID = ByteArrayToString(SRC);
+            return _KEYS[srcID].loginSIGNS;
         }
     }
 }
