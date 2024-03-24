@@ -32,8 +32,7 @@ namespace TestAPILayer
         private string ByteArrayToString(byte[] bytes)
         {
             var sb = new StringBuilder();
-            sb.Append(string.Join("", bytes));
-            Console.WriteLine(sb.ToString());
+            sb.Append(string.Join("", bytes));           
             return sb.ToString();
         }
 
