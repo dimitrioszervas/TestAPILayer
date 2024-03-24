@@ -4,6 +4,7 @@ using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
+using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -170,13 +171,8 @@ namespace TestAPILayer
             return keys;
         }
 
-        public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, string secretString, int n)
-        {
-            string saltString = "";
-
-            byte[] secret = Encoding.UTF8.GetBytes(secretString);
-            byte[] salt = Encoding.UTF8.GetBytes(saltString);
-
+        public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, byte [] secret, byte[] salt, int n)
+        {    
             byte[] src = DeriveKeyHKDF(secret, SRC_SIZE, salt, Encoding.UTF8.GetBytes("src"));
 
             salt = src;
@@ -258,7 +254,12 @@ namespace TestAPILayer
             byte[] ownerID = new byte[SRC_SIZE];
             string ownerCode = OWNER_CODE;
 
-            GenerateKeys(ref encrypts, ref signs, ref ownerID, ownerCode, NUM_SERVERS);
+            string saltString = "";
+
+            byte[] secret = Encoding.UTF8.GetBytes(ownerCode);
+            byte[] salt = Encoding.UTF8.GetBytes(saltString);
+
+            GenerateKeys(ref encrypts, ref signs, ref ownerID, secret, salt, NUM_SERVERS);
 
             KeyStore.Inst.StoreENCRYPTS(ownerID, encrypts);
             KeyStore.Inst.StoreSIGNS(ownerID, signs);
