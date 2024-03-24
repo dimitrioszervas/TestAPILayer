@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
 using System.Text;
@@ -31,7 +32,8 @@ namespace TestAPILayer
         private string ByteArrayToString(byte[] bytes)
         {
             var sb = new StringBuilder();
-            sb.Append(bytes);
+            sb.Append(string.Join("", bytes));
+            Console.WriteLine(sb.ToString());
             return sb.ToString();
         }
 
