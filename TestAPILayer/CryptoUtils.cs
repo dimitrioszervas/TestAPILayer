@@ -1,4 +1,5 @@
-﻿using Org.BouncyCastle.Crypto;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -133,6 +134,16 @@ namespace TestAPILayer
             return sb.ToString();
         }
 
+        public static byte[] DeriveKeyHKDF(byte[] ikm, int outputLength, byte [] salt, byte [] info)
+        {
+            byte[] key = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
+                                       ikm: ikm,
+                                       outputLength: outputLength,
+                                       salt: salt,
+                                       info: info);
+            return key;
+        }
+
         private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
         {
             List<byte[]> keys = new List<byte[]>();
@@ -152,7 +163,7 @@ namespace TestAPILayer
 
             for (int i = 0; i <= n; i++)
             {
-                byte[] key = HKDF.DeriveKey(HashAlgorithmName.SHA256, baseKey, KEY_SIZE, salt, info);
+                byte[] key = DeriveKeyHKDF(baseKey, KEY_SIZE, salt, info);
                 keys.Add(key);
             }
 
@@ -166,26 +177,13 @@ namespace TestAPILayer
             byte[] secret = Encoding.UTF8.GetBytes(secretString);
             byte[] salt = Encoding.UTF8.GetBytes(saltString);
 
-            byte[] src = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
-                                        ikm: secret,
-                                        outputLength: SRC_SIZE,
-                                        salt: salt,
-                                        info: Encoding.UTF8.GetBytes("src"));
+            byte[] src = DeriveKeyHKDF(secret, SRC_SIZE, salt, Encoding.UTF8.GetBytes("src"));
 
             salt = src;
 
-            byte[] sign = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
-                                         ikm: secret,
-                                         outputLength: KEY_SIZE,
-                                         salt: salt,
-                                         info: Encoding.UTF8.GetBytes("sign"));
-           
+            byte[] sign = DeriveKeyHKDF(secret, KEY_SIZE, salt, Encoding.UTF8.GetBytes("sign"));           
 
-            byte[] encrypt = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
-                                           ikm: secret,
-                                           outputLength: KEY_SIZE,
-                                           salt: salt,
-                                           info: Encoding.UTF8.GetBytes("encrypt"));           
+            byte[] encrypt = DeriveKeyHKDF(secret, KEY_SIZE, salt, Encoding.UTF8.GetBytes("encrypt"));           
 
             encrypts = GenerateNKeys(n, salt, KeyType.ENCRYPT, encrypt);
             signs = GenerateNKeys(n, salt, KeyType.SIGN, sign);

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
 using System.Net;
@@ -158,11 +159,14 @@ namespace TestAPILayer.Controllers
             RegisterRequest transactionObj =
                JsonConvert.DeserializeObject<RegisterRequest>(rebuiltDataJSON);
 
-            // servers store DS.PUB + DE.PUB + NONCE
+            // servers store DS PUB + DE.PUB + NONCE + wTOKEN
             KeyStore.Inst.StoreDS_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
             KeyStore.Inst.StoreDE_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB));
             KeyStore.Inst.StoreNONCE(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));
             KeyStore.Inst.StoreWTOKEN(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN));
+
+            // servers derive login.SECRET using ECDH (DE.PUB, SE.PRIV[]
+
 
             // servers create SE[] = create ECDH key pair          
             List<byte[]> SE_PUB = new List<byte[]>();
