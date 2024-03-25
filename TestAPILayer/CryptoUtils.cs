@@ -1,7 +1,6 @@
 ﻿using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
-using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -23,9 +22,8 @@ namespace TestAPILayer
         }
         
         public const string OWNER_CODE = "1234";
-
-        public const int NUM_SERVERS = 3;
-        public const int NUM_KEYS = NUM_SERVERS + 1;
+       
+        public const int NUM_KEYS = Servers.NUM_SERVERS + 1;
 
         public const int KEY_SIZE32 = 32;
 
@@ -37,15 +35,15 @@ namespace TestAPILayer
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] nonceIn)
         {
 
-            // get raw bytes spans
+            // get raw privateKey spans
             var encryptedData = cipherData.AsSpan();
 
-            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 bytes           
+            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 privateKey           
 
             // ciphertext size is whole data - nonce - tag
             var cipherSize = encryptedData.Length - tagSizeBytes;
 
-            // extract nonce (nonce) 12 bytes prefix          
+            // extract nonce (nonce) 12 privateKey prefix          
             byte[] nonce = new byte[12];
             Array.Copy(nonceIn, nonce, 8);
 
@@ -67,14 +65,14 @@ namespace TestAPILayer
 
         /*
 
-        public static byte[] Decrypt(byte[] encryptedData, byte[] key, byte[] nonceIn)
+        public static byte[] Decrypt(byte[] encryptedData, byte[] cngPublicKey, byte[] nonceIn)
         {
             var ciphertext = encryptedData[0..^16];
             var tag = encryptedData[^16..];
             byte[] decrytedBytes = new byte[ciphertext.Length];
             try
             {
-                var aes = new AesGcm(key);
+                var aes = new AesGcm(cngPublicKey);
 
                 byte[] nonce = new byte[12];
                 Array.Copy(nonceIn, nonce, 8);
@@ -132,7 +130,7 @@ namespace TestAPILayer
             return sb.ToString();
         }
 
-        public static byte[] DeriveKeyHKDF(byte[] ikm, int outputLength, byte [] salt, byte [] info)
+        public static byte[] DeriveHKDFKey(byte[] ikm, int outputLength, byte [] salt, byte [] info)
         {
             byte[] key = HKDF.DeriveKey(hashAlgorithmName: HashAlgorithmName.SHA256,
                                        ikm: ikm,
@@ -142,34 +140,39 @@ namespace TestAPILayer
             return key;
         }
 
-        public static byte[] DeriveKeyHKDF32(byte[] ikm, byte[] salt, byte[] info)
+        public static byte[] DeriveHKDF32Key(byte[] ikm, byte[] salt, byte[] info)
         {
-            byte[] key = DeriveKeyHKDF(ikm: ikm,
+            byte[] key = DeriveHKDFKey(ikm: ikm,
                                        outputLength: 32,
                                        salt: salt,
                                        info: info);
             return key;
         }
 
-        public static byte[] DeriveKeyHKDF8(byte[] ikm, byte[] salt, byte[] info)
+        public static byte[] DeriveHKDF8Key(byte[] ikm, byte[] salt, byte[] info)
         {
-            byte[] key = DeriveKeyHKDF(ikm: ikm,
+            byte[] key = DeriveHKDFKey(ikm: ikm,
                                        outputLength: 8,
                                        salt: salt,
                                        info: info);
             return key;
         }
 
-        public static byte[] DeriveKeyECDH(byte[] keyBlob)
+        public static byte[] DeriveECDHKey(byte[] publicKey, byte [] privateKey)
         {
-            using (ECDiffieHellmanCng ecdh = new ECDiffieHellmanCng())
-            {
+            CngKey cngPrivateKey = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob);
+            //CngKey cngPublicKey = CngKey.Import(publicKey, CngKeyBlobFormat.EccPublicBlob);
+            Console.WriteLine($"Public DE.PUB SIZE: {publicKey.Length}");
+            Console.WriteLine($"Public DE.PUB: {CryptoUtils.ByteArrayToStringDebug(publicKey)}");
 
-                ecdh.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
-                ecdh.HashAlgorithm = CngAlgorithm.Sha256;              
-                CngKey key = CngKey.Import(keyBlob, CngKeyBlobFormat.EccPublicBlob);
-                byte[] derivedKey = ecdh.DeriveKeyMaterial(key);            
-                return derivedKey;
+            using (ECDiffieHellmanCng ecDiffieHellmanCng = new ECDiffieHellmanCng(cngPrivateKey))
+            {
+                ecDiffieHellmanCng.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
+                ecDiffieHellmanCng.HashAlgorithm = CngAlgorithm.Sha256;
+
+                byte[] derivedECDHKey = null; //ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
+                
+                return derivedECDHKey;
             }
         }
 
@@ -192,7 +195,7 @@ namespace TestAPILayer
 
             for (int i = 0; i <= n; i++)
             {
-                byte[] key = DeriveKeyHKDF(baseKey, KEY_SIZE32, salt, info);
+                byte[] key = DeriveHKDFKey(baseKey, KEY_SIZE32, salt, info);
                 keys.Add(key);
             }
 
@@ -201,13 +204,13 @@ namespace TestAPILayer
 
         public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, byte [] secret, byte[] salt, int n)
         {    
-            byte[] src = DeriveKeyHKDF8(secret, salt, Encoding.UTF8.GetBytes("src"));
+            byte[] src = DeriveHKDF8Key(secret, salt, Encoding.UTF8.GetBytes("src"));
 
             salt = src;
 
-            byte[] sign = DeriveKeyHKDF32(secret, salt, Encoding.UTF8.GetBytes("sign"));           
+            byte[] sign = DeriveHKDF32Key(secret, salt, Encoding.UTF8.GetBytes("sign"));           
 
-            byte[] encrypt = DeriveKeyHKDF32(secret, salt, Encoding.UTF8.GetBytes("encrypt"));           
+            byte[] encrypt = DeriveHKDF32Key(secret, salt, Encoding.UTF8.GetBytes("encrypt"));           
 
             encrypts = GenerateNKeys(n, salt, KeyType.ENCRYPT, encrypt);
             signs = GenerateNKeys(n, salt, KeyType.SIGN, sign);
@@ -287,7 +290,7 @@ namespace TestAPILayer
             byte[] secret = Encoding.UTF8.GetBytes(ownerCode);
             byte[] salt = Encoding.UTF8.GetBytes(saltString);
 
-            GenerateKeys(ref encrypts, ref signs, ref ownerID, secret, salt, NUM_SERVERS);
+            GenerateKeys(ref encrypts, ref signs, ref ownerID, secret, salt, Servers.NUM_SERVERS);
 
             KeyStore.Inst.StoreENCRYPTS(ownerID, encrypts);
             KeyStore.Inst.StoreSIGNS(ownerID, signs);

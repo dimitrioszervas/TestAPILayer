@@ -28,7 +28,7 @@ namespace TestAPILayer.Controllers
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the loginID array 
             int numShards = shardsCBOR.Values.Count - 1;
-            int numShardsPerServer = numShards / CryptoUtils.NUM_SERVERS;
+            int numShardsPerServer = numShards / Servers.NUM_SERVERS;
 
             src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
 
@@ -160,48 +160,36 @@ namespace TestAPILayer.Controllers
 
             RegisterRequest transactionObj =
                JsonConvert.DeserializeObject<RegisterRequest>(rebuiltDataJSON);
-
-            // servers store DS PUB + DE.PUB + NONCE + wTOKEN
+          
             byte[] DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB);
             byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
             byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
             byte[] deviceID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.deviceID);
 
-            KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
-            KeyStore.Inst.StoreDE_PUB(deviceID, DE_PUB);
-            KeyStore.Inst.StoreNONCE(deviceID, NONCE);
-            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);                       
-
-            // servers create SE[] = create ECDH keyPairECDH pair          
+            // servers create SE[] = create ECDH key pair        
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
+            for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
                 var keyPairECDH = CryptoUtils.CreateECDH();
                 SE_PUB.Add(keyPairECDH.PublicKey);
                 SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
-            // servers store SE.PRIV[]
-            KeyStore.Inst.StoreSE_PRIV(deviceID, SE_PRIV);
+            // servers store DS PUB + wTOKEN + NONCE
+            KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);            
+            KeyStore.Inst.StoreNONCE(deviceID, NONCE);
+            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);
 
-            // servers derive login.SECRET using ECDH (DE.PUB, SE.PRIV[])          
-            //byte[] loginSECRET = Encoding.UTF8.GetBytes("login.SECRET");          
-            byte[] loginSECRET = CryptoUtils.DeriveKeyHKDF32(DE_PUB,
-                                                             SE_PRIV[0],
-                                                             Encoding.UTF8.GetBytes("login.SECRET"));
-
-            // servers derive + store login.KEYS(login.SIGNS + login.ENCRYPTS) for invite.id
-            List<byte[]> loginENCRYPTS = new List<byte[]>();
-            List<byte[]> loginSIGNS = new List<byte[]>();
-            byte[] loginID = new byte[CryptoUtils.SRC_SIZE8];
-            byte[] salt = Encoding.UTF8.GetBytes("");
-
-            CryptoUtils.GenerateKeys(ref loginENCRYPTS, ref loginSIGNS, ref loginID, loginSECRET, salt, CryptoUtils.NUM_SERVERS);
-
-            KeyStore.Inst.StoreLoginENCRYPTS(deviceID, loginENCRYPTS);
-            KeyStore.Inst.StoreLoginSIGNS(deviceID, loginSIGNS);
+            // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
+            List<byte[]> LOGINS = new List<byte[]>(); 
+            for (int i = 0; i < SE_PRIV.Count; i++)
+            {
+                byte[] derivedECDHKey = CryptoUtils.DeriveECDHKey(DE_PUB, SE_PRIV[i]);
+                //LOGINS.Add(derivedECDHKey);
+            }
+            
 
             // response is SE.PUB[] 
             var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
@@ -254,13 +242,13 @@ namespace TestAPILayer.Controllers
 
             // servers store DS.PUB + DE.PUB + NONCE
             KeyStore.Inst.StoreDS_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
-            KeyStore.Inst.StoreDE_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB));
+            //KeyStore.Inst.StoreDE_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB));
             KeyStore.Inst.StoreNONCE(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));
 
             // servers create SE[] = create ECDH keyPairECDH pair
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
+            for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
                 //ECDiffieHellmanCng keyPairECDH = CryptoUtils.CreateECDH();
                 SE_PUB.Add(new byte[32]);// keyPairECDH.PublicKey.ToByteArray();

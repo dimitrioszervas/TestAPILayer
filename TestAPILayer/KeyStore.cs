@@ -18,7 +18,7 @@ namespace TestAPILayer
             public List<byte[]> SE_PRIV { get; set; } = new List<byte[]>();
 
             public byte[] DS_PUB;
-            public byte[] DE_PUB;
+            //public byte[] DE_PUB;
             public byte[] NONCE;
             public byte[] wTOKEN;
         }
@@ -139,16 +139,16 @@ namespace TestAPILayer
             Array.Copy(DS_PUB, _KEYS[srcID].DS_PUB, DS_PUB.Length);
         }
 
-        public void StoreDE_PUB(byte[] SRC, byte[] DE_PUB)
-        {
-            string srcID = ByteArrayToString(SRC);
-            if (!_KEYS.ContainsKey(srcID))
-            {
-                _KEYS.TryAdd(srcID, new Keys());
-            }
-            _KEYS[srcID].DE_PUB = new byte[DE_PUB.Length];
-            Array.Copy(DE_PUB, _KEYS[srcID].DE_PUB, DE_PUB.Length);
-        }
+        //public void StoreDE_PUB(byte[] SRC, byte[] DE_PUB)
+        //{
+        //    string srcID = ByteArrayToString(SRC);
+        //    if (!_KEYS.ContainsKey(srcID))
+        //    {
+        //        _KEYS.TryAdd(srcID, new Keys());
+        //    }
+        //    _KEYS[srcID].DE_PUB = new byte[DE_PUB.Length];
+        //    Array.Copy(DE_PUB, _KEYS[srcID].DE_PUB, DE_PUB.Length);
+        //}
 
         public void StoreNONCE(byte[] SRC, byte[] NONCE)
         {
@@ -209,11 +209,11 @@ namespace TestAPILayer
             return _KEYS[srcID].DS_PUB;
         }
 
-        public byte[] GetDE_PUB(byte[] SRC)
-        {
-            string srcID = ByteArrayToString(SRC);
-            return _KEYS[srcID].DE_PUB;
-        }
+        //public byte[] GetDE_PUB(byte[] SRC)
+        //{
+        //    string srcID = ByteArrayToString(SRC);
+        //    return _KEYS[srcID].DE_PUB;
+        //}
 
         public void StoreLoginENCRYPTS(byte[] SRC, List<byte[]> loginENCRYPTS)
         {
