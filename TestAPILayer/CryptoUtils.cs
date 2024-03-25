@@ -1,19 +1,15 @@
-﻿using Microsoft.AspNetCore.DataProtection;
-using Org.BouncyCastle.Crypto;
+﻿using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
-using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Security;
-using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace TestAPILayer
 {
-    
+
     static class CryptoUtils
     {
-        public class KeyPair
+        public class ECDHKeyPair
         {
             public byte[] PublicKey {  get; set; }
             public byte[] PrivateKey {  get; set; }
@@ -239,12 +235,12 @@ namespace TestAPILayer
         }
 
      
-        public static KeyPair CreateECDH()
+        public static ECDHKeyPair CreateECDH()
         {
             var ecdh = new ECDiffieHellmanCng(CngKey.Create(CngAlgorithm.ECDiffieHellmanP256, null, new CngKeyCreationParameters { ExportPolicy = CngExportPolicies.AllowPlaintextExport }));
             var privateKey = ecdh.Key.Export(CngKeyBlobFormat.EccPrivateBlob);
             var publickey = ecdh.Key.Export(CngKeyBlobFormat.EccPublicBlob);
-            KeyPair keyPair = new KeyPair();
+            ECDHKeyPair keyPair = new ECDHKeyPair();
 
             keyPair.PublicKey = publickey;
             keyPair.PrivateKey = privateKey;

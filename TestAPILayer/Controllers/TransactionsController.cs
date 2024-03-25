@@ -172,15 +172,14 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreNONCE(inviteID, NONCE);
             KeyStore.Inst.StoreWTOKEN(inviteID, wTOKEN);                       
 
-            // servers create SE[] = create ECDH key pair          
+            // servers create SE[] = create ECDH keyPairECDH pair          
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
-                var key = CryptoUtils.CreateECDH();
-                SE_PUB.Add(key.PublicKey);
-
-                SE_PRIV.Add(key.PrivateKey);
+                var keyPairECDH = CryptoUtils.CreateECDH();
+                SE_PUB.Add(keyPairECDH.PublicKey);
+                SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
             // servers store SE.PRIV[]
@@ -257,15 +256,15 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreDE_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB));
             KeyStore.Inst.StoreNONCE(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));
 
-            // servers create SE[] = create ECDH key pair
+            // servers create SE[] = create ECDH keyPairECDH pair
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
             for (int i = 0; i < CryptoUtils.NUM_SERVERS; i++)
             {
-                //ECDiffieHellmanCng key = CryptoUtils.CreateECDH();
-                SE_PUB.Add(new byte[32]);// key.PublicKey.ToByteArray();
+                //ECDiffieHellmanCng keyPairECDH = CryptoUtils.CreateECDH();
+                SE_PUB.Add(new byte[32]);// keyPairECDH.PublicKey.ToByteArray();
 
-                SE_PRIV.Add(new byte[32]);// key.ExportECPrivateKey();
+                SE_PRIV.Add(new byte[32]);// keyPairECDH.ExportECPrivateKey();
             }
             //servers store SE.PRIV[]
             KeyStore.Inst.StoreSE_PRIV(src, SE_PRIV);
