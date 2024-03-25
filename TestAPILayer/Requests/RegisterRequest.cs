@@ -6,5 +6,6 @@
         public string DE_PUB;
         public string wTOKEN;
         public string NONCE;
+        public string deviceID;
     }
 }

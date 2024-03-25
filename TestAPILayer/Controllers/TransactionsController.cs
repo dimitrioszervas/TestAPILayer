@@ -152,8 +152,8 @@ namespace TestAPILayer.Controllers
             }
 
             // Decode request's CBOR bytes   
-            byte[] inviteID = new byte[CryptoUtils.SRC_SIZE8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref inviteID);
+            byte[] src = new byte[CryptoUtils.SRC_SIZE8];
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src);
             Console.WriteLine("Register:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -166,11 +166,12 @@ namespace TestAPILayer.Controllers
             byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
             byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
+            byte[] deviceID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.deviceID);
 
-            KeyStore.Inst.StoreDS_PUB(inviteID, DS_PUB);
-            KeyStore.Inst.StoreDE_PUB(inviteID, DE_PUB);
-            KeyStore.Inst.StoreNONCE(inviteID, NONCE);
-            KeyStore.Inst.StoreWTOKEN(inviteID, wTOKEN);                       
+            KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
+            KeyStore.Inst.StoreDE_PUB(deviceID, DE_PUB);
+            KeyStore.Inst.StoreNONCE(deviceID, NONCE);
+            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);                       
 
             // servers create SE[] = create ECDH keyPairECDH pair          
             List<byte[]> SE_PUB = new List<byte[]>();
@@ -183,7 +184,7 @@ namespace TestAPILayer.Controllers
             }
 
             // servers store SE.PRIV[]
-            KeyStore.Inst.StoreSE_PRIV(inviteID, SE_PRIV);
+            KeyStore.Inst.StoreSE_PRIV(deviceID, SE_PRIV);
 
             // servers derive login.SECRET using ECDH (DE.PUB, SE.PRIV[])          
             //byte[] loginSECRET = Encoding.UTF8.GetBytes("login.SECRET");          
@@ -199,8 +200,8 @@ namespace TestAPILayer.Controllers
 
             CryptoUtils.GenerateKeys(ref loginENCRYPTS, ref loginSIGNS, ref loginID, loginSECRET, salt, CryptoUtils.NUM_SERVERS);
 
-            KeyStore.Inst.StoreLoginENCRYPTS(inviteID, loginENCRYPTS);
-            KeyStore.Inst.StoreLoginSIGNS(inviteID, loginSIGNS);
+            KeyStore.Inst.StoreLoginENCRYPTS(deviceID, loginENCRYPTS);
+            KeyStore.Inst.StoreLoginSIGNS(deviceID, loginSIGNS);
 
             // response is SE.PUB[] 
             var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
