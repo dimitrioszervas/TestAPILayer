@@ -5,6 +5,7 @@ using PeterO.Cbor;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
@@ -173,14 +174,14 @@ namespace TestAPILayer.Controllers
             for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
                 var keyPairECDH = CryptoUtils.CreateECDH();
-                SE_PUB.Add(keyPairECDH.PublicKey);
+                SE_PUB.Add(keyPairECDH.PublicKey);               
                 SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
             // servers store DS PUB + wTOKEN + NONCE
             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);            
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
-            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);
+            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);         
 
             // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
             List<byte[]> LOGINS = new List<byte[]>(); 

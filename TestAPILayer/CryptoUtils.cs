@@ -1,4 +1,5 @@
-﻿using Org.BouncyCastle.Crypto;
+﻿using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
 using System.Security.Cryptography;
@@ -158,19 +159,39 @@ namespace TestAPILayer
             return key;
         }
 
-        public static byte[] DeriveECDHKey(byte[] publicKey, byte [] privateKey)
-        {
-            CngKey cngPrivateKey = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob);
-            //CngKey cngPublicKey = CngKey.Import(publicKey, CngKeyBlobFormat.EccPublicBlob);
-            Console.WriteLine($"Public DE.PUB SIZE: {publicKey.Length}");
-            Console.WriteLine($"Public DE.PUB: {CryptoUtils.ByteArrayToStringDebug(publicKey)}");
+        // For ECDH instead of ECDSA, change 0x53 to 0x4B.
+        //private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x53, 0x31, 0x20, 0, 0, 0 };
+        private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x4B, 0x31, 0x20, 0, 0, 0 };
 
+        public static CngKey ImportPublicKeyToCngKey(byte[] publicKey)
+        {
+            var keyType = new byte[] { 0x45, 0x43, 0x53, 0x31 };
+            var keyLength = new byte[] { 0x20, 0x00, 0x00, 0x00 };
+
+            byte[] key = new byte[publicKey.Length - 1];
+            for (int i = 1; i < publicKey.Length; i++)
+            {
+                key[i - 1] = publicKey[i];
+            }
+            var keyImport = keyType.Concat(keyLength).Concat(key).ToArray();
+         
+            var cngKey = CngKey.Import(keyImport, CngKeyBlobFormat.EccPublicBlob);
+
+            return cngKey;
+        }
+
+        public static byte[] DeriveECDHKey(byte[] publicKey, byte [] privateKey)
+        {           
+            CngKey cngPrivateKey = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob);
+            
+            CngKey cngPublicKey = ImportPublicKeyToCngKey(publicKey);
+           
             using (ECDiffieHellmanCng ecDiffieHellmanCng = new ECDiffieHellmanCng(cngPrivateKey))
             {
                 ecDiffieHellmanCng.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
                 ecDiffieHellmanCng.HashAlgorithm = CngAlgorithm.Sha256;
 
-                byte[] derivedECDHKey = null; //ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
+                byte[] derivedECDHKey = null;// ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
                 
                 return derivedECDHKey;
             }
