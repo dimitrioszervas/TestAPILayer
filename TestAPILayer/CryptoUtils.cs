@@ -1,6 +1,7 @@
 ﻿using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
+using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -157,6 +158,19 @@ namespace TestAPILayer
                                        salt: salt,
                                        info: info);
             return key;
+        }
+
+        public static byte[] DeriveKeyECDH(byte[] keyBlob)
+        {
+            using (ECDiffieHellmanCng alice = new ECDiffieHellmanCng())
+            {
+
+                alice.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
+                alice.HashAlgorithm = CngAlgorithm.Sha256;              
+                CngKey key = CngKey.Import(keyBlob, CngKeyBlobFormat.EccPublicBlob);
+                byte[] derivedKey = alice.DeriveKeyMaterial(key);            
+                return derivedKey;
+            }
         }
 
         private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
