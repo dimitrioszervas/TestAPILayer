@@ -162,13 +162,13 @@ namespace TestAPILayer
 
         public static byte[] DeriveKeyECDH(byte[] keyBlob)
         {
-            using (ECDiffieHellmanCng alice = new ECDiffieHellmanCng())
+            using (ECDiffieHellmanCng ecdh = new ECDiffieHellmanCng())
             {
 
-                alice.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
-                alice.HashAlgorithm = CngAlgorithm.Sha256;              
+                ecdh.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
+                ecdh.HashAlgorithm = CngAlgorithm.Sha256;              
                 CngKey key = CngKey.Import(keyBlob, CngKeyBlobFormat.EccPublicBlob);
-                byte[] derivedKey = alice.DeriveKeyMaterial(key);            
+                byte[] derivedKey = ecdh.DeriveKeyMaterial(key);            
                 return derivedKey;
             }
         }
