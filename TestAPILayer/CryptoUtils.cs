@@ -163,9 +163,10 @@ namespace TestAPILayer
         //private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x53, 0x31, 0x20, 0, 0, 0 };
         private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x4B, 0x31, 0x20, 0, 0, 0 };
 
-        public static CngKey ImportPublicKeyToCngKey(byte[] publicKey)
+        public static CngKey ImportECDHPublicKeyToCngKey(byte[] publicKey)
         {
-            var keyType = new byte[] { 0x45, 0x43, 0x53, 0x31 };
+            // For ECDH instead of ECDSA, change 0x53 to 0x4B.
+            var keyType = new byte[] { 0x45, 0x43, 0x4B, 0x31 };
             var keyLength = new byte[] { 0x20, 0x00, 0x00, 0x00 };
 
             byte[] key = new byte[publicKey.Length - 1];
@@ -184,7 +185,7 @@ namespace TestAPILayer
         {           
             CngKey cngPrivateKey = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob);
             
-            CngKey cngPublicKey = ImportPublicKeyToCngKey(publicKey);
+            CngKey cngPublicKey = ImportECDHPublicKeyToCngKey(publicKey);
            
             using (ECDiffieHellmanCng ecDiffieHellmanCng = new ECDiffieHellmanCng(cngPrivateKey))
             {

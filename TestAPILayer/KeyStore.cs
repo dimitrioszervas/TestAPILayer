@@ -12,9 +12,7 @@ namespace TestAPILayer
         {
             public List<byte[]> ENCRYPTS { get; set; } = new List<byte[]>();
             public List<byte[]> SIGNS { get; set; } = new List<byte[]>();
-            public List<byte[]> loginENCRYPTS { get; set; } = new List<byte[]>();
-            public List<byte[]> loginSIGNS { get; set; } = new List<byte[]>();
-
+            public List<byte[]> LOGINS { get; set; } = new List<byte[]>();   
             public List<byte[]> SE_PRIV { get; set; } = new List<byte[]>();
 
             public byte[] DS_PUB;
@@ -215,7 +213,7 @@ namespace TestAPILayer
         //    return _KEYS[srcID].DE_PUB;
         //}
 
-        public void StoreLoginENCRYPTS(byte[] SRC, List<byte[]> loginENCRYPTS)
+        public void StoreLOGINS(byte[] SRC, List<byte[]> LOGINS)
         {
             string srcID = ByteArrayToString(SRC);
 
@@ -223,38 +221,18 @@ namespace TestAPILayer
             {
                 _KEYS.TryAdd(srcID, new Keys());
             }
-            _KEYS[srcID].loginENCRYPTS.Clear();
-            for (int i = 0; i < loginENCRYPTS.Count; i++)
+            _KEYS[srcID].LOGINS.Clear();
+            for (int i = 0; i < LOGINS.Count; i++)
             {
-                _KEYS[srcID].loginENCRYPTS.Add(loginENCRYPTS[i]);
+                _KEYS[srcID].LOGINS.Add(LOGINS[i]);
             }
         }
 
-        public void StoreLoginSIGNS(byte[] SRC, List<byte[]> loginSIGNS)
+        public List<byte[]> GetLOGINS(byte[] SRC)
         {
             string srcID = ByteArrayToString(SRC);
-
-            if (!_KEYS.ContainsKey(srcID))
-            {
-                _KEYS.TryAdd(srcID, new Keys());
-            }
-            _KEYS[srcID].loginSIGNS.Clear();
-            for (int i = 0; i < loginSIGNS.Count; i++)
-            {
-                _KEYS[srcID].loginSIGNS.Add(loginSIGNS[i]);
-            }
+            return _KEYS[srcID].LOGINS;
         }
 
-        public List<byte[]> GetLoginENCRYPTS(byte[] SRC)
-        {
-            string srcID = ByteArrayToString(SRC);
-            return _KEYS[srcID].loginENCRYPTS;
-        }
-
-        public List<byte[]> GetLoginSIGNS(byte[] SRC)
-        {
-            string srcID = ByteArrayToString(SRC);
-            return _KEYS[srcID].loginSIGNS;
-        }
     }
 }

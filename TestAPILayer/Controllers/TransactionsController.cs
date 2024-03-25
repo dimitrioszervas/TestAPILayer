@@ -188,12 +188,14 @@ namespace TestAPILayer.Controllers
             for (int i = 0; i < SE_PRIV.Count; i++)
             {
                 byte[] derivedECDHKey = CryptoUtils.DeriveECDHKey(DE_PUB, SE_PRIV[i]);
-                //LOGINS.Add(derivedECDHKey);
+                LOGINS.Add(derivedECDHKey);
             }
-            
+            KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
 
-            // response is SE.PUB[] 
-            var cbor = CBORObject.NewMap().Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
+            //  response is wTOKEN, SE.PUB[] 
+            var cbor = CBORObject.NewMap()
+                .Add("wTOKEN", CBORObject.NewArray().Add(wTOKEN))
+                .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
             return Ok(cbor.EncodeToBytes());
         }
