@@ -193,8 +193,7 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
 
             //  response is wTOKEN, SE.PUB[] 
-            var cbor = CBORObject.NewMap()
-                .Add("wTOKEN", CBORObject.NewArray().Add(wTOKEN))
+            var cbor = CBORObject.NewMap()              
                 .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
             return Ok(cbor.EncodeToBytes());
