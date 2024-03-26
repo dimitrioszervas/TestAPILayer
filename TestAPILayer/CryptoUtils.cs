@@ -294,9 +294,9 @@ namespace TestAPILayer
      
         public static ECDHKeyPair CreateECDH()
         {
-            var ecdh = new ECDiffieHellmanCng(CngKey.Create(CngAlgorithm.ECDiffieHellmanP256, null, new CngKeyCreationParameters { ExportPolicy = CngExportPolicies.AllowPlaintextExport }));
-            var privateKey = ecdh.Key.Export(CngKeyBlobFormat.EccPrivateBlob);
-            var publickey = ecdh.Key.Export(CngKeyBlobFormat.EccPublicBlob);
+            var ecDiffieHellmanCng = new ECDiffieHellmanCng(CngKey.Create(CngAlgorithm.ECDiffieHellmanP256, null, new CngKeyCreationParameters { ExportPolicy = CngExportPolicies.AllowPlaintextExport }));
+            var privateKey = ecDiffieHellmanCng.Key.Export(CngKeyBlobFormat.EccPrivateBlob);
+            var publickey = ecDiffieHellmanCng.Key.Export(CngKeyBlobFormat.EccPublicBlob);
             ECDHKeyPair keyPair = new ECDHKeyPair();
 
             keyPair.PublicKey = publickey;

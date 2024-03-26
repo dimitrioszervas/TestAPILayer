@@ -22,7 +22,7 @@ namespace TestAPILayer.Controllers
 
         // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
         // needed for rebuilding the data using Reed-Solomon.
-        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, ref byte[] src)
+        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, ref byte[] src, bool useLogins)
         {      
             CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);         
           
@@ -33,7 +33,7 @@ namespace TestAPILayer.Controllers
 
             src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
 
-            List<byte[]> encrypts = KeyStore.Inst.GetENCRYPTS(src);
+            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
 
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
@@ -57,7 +57,7 @@ namespace TestAPILayer.Controllers
             return dataShards;          
         }                    
        
-        public static string GetTransactionFromCBOR(byte[] requestBytes, ref byte[] src)
+        public static string GetTransactionFromCBOR(byte[] requestBytes, ref byte[] src, bool useLogins)
         {
             // Decode request's CBOR bytes  
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
@@ -65,9 +65,9 @@ namespace TestAPILayer.Controllers
             byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
            
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src, useLogins);
             
-            List<byte[]> signs = KeyStore.Inst.GetSIGNS(src); 
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src); 
 
             bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
 
@@ -115,7 +115,7 @@ namespace TestAPILayer.Controllers
 
             // Decode request's CBOR bytes   
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src, false);
 
             Console.WriteLine("Invite:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
@@ -154,7 +154,7 @@ namespace TestAPILayer.Controllers
 
             // Decode request's CBOR bytes   
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src);
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src, false);
             Console.WriteLine("Register:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -171,21 +171,21 @@ namespace TestAPILayer.Controllers
             // servers create SE[] = create ECDH key pair        
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int i = 0; i < Servers.NUM_SERVERS; i++)
+            for (int i = 0; i <= Servers.NUM_SERVERS; i++)
             {
                 var keyPairECDH = CryptoUtils.CreateECDH();
                 SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));               
                 SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
-            // servers store DS PUB + wTOKEN + NONCE
+            // servers store DS PUB + wTOKEN + oldNONCE
             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);            
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
             KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);         
 
             // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
             List<byte[]> LOGINS = new List<byte[]>(); 
-            for (int i = 0; i < SE_PRIV.Count; i++)
+            for (int i = 0; i <= Servers.NUM_SERVERS; i++)
             {
                 byte[] derivedECDHKey = CryptoUtils.DeriveECDHKey(DE_PUB, SE_PRIV[i]);
                 LOGINS.Add(derivedECDHKey);
@@ -216,7 +216,7 @@ namespace TestAPILayer.Controllers
 
             // Decode request's CBOR bytes
             byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8]; 
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID);
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, true);
             Console.WriteLine("Login");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -224,18 +224,18 @@ namespace TestAPILayer.Controllers
             LoginRequest transactionObj =
                JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
 
-            // servers unwrap wKEYS using NONCE + store KEYS
+            // servers unwrap wKEYS using oldNONCE + store KEYS
             List<byte[]> ENCRYPTS = new List<byte[]>();
             List<byte[]> SIGNS = new List<byte[]>();
-            byte[] NONCE = KeyStore.Inst.GetNONCE(deviceID);
+            byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
             for (int i = 0; i < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; i++)
             {
                 byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[i]);
-                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, NONCE);
+                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
                 ENCRYPTS.Add(unwrapENCRYPT);
 
                 byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[i]);
-                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, NONCE);
+                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
                 SIGNS.Add(unwrapSIGN);
             }
             KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
@@ -254,7 +254,7 @@ namespace TestAPILayer.Controllers
             //servers store SE.PRIV[]
             KeyStore.Inst.StoreSE_PRIV(deviceID, SE_PRIV);
 
-            //  servers store DS PUB  + NONCE  
+            //  servers store DS PUB  + oldNONCE  
             KeyStore.Inst.StoreDS_PUB(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
             KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));         
 
