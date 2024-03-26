@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.Extensions.Primitives;
-using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
 
 namespace TestAPILayer
@@ -15,8 +12,7 @@ namespace TestAPILayer
             public List<byte[]> LOGINS { get; set; } = new List<byte[]>();   
             public List<byte[]> SE_PRIV { get; set; } = new List<byte[]>();
 
-            public byte[] DS_PUB;
-            //public byte[] DE_PUB;
+            public byte[] DS_PUB;       
             public byte[] NONCE;
             public byte[] wTOKEN;
         }
@@ -136,18 +132,7 @@ namespace TestAPILayer
             _KEYS[srcID].DS_PUB = new byte[DS_PUB.Length];
             Array.Copy(DS_PUB, _KEYS[srcID].DS_PUB, DS_PUB.Length);
         }
-
-        //public void StoreDE_PUB(byte[] SRC, byte[] DE_PUB)
-        //{
-        //    string srcID = ByteArrayToString(SRC);
-        //    if (!_KEYS.ContainsKey(srcID))
-        //    {
-        //        _KEYS.TryAdd(srcID, new Keys());
-        //    }
-        //    _KEYS[srcID].DE_PUB = new byte[DE_PUB.Length];
-        //    Array.Copy(DE_PUB, _KEYS[srcID].DE_PUB, DE_PUB.Length);
-        //}
-
+              
         public void StoreNONCE(byte[] SRC, byte[] NONCE)
         {
             string srcID = ByteArrayToString(SRC);
@@ -206,12 +191,6 @@ namespace TestAPILayer
             string srcID = ByteArrayToString(SRC);
             return _KEYS[srcID].DS_PUB;
         }
-
-        //public byte[] GetDE_PUB(byte[] SRC)
-        //{
-        //    string srcID = ByteArrayToString(SRC);
-        //    return _KEYS[srcID].DE_PUB;
-        //}
 
         public void StoreLOGINS(byte[] SRC, List<byte[]> LOGINS)
         {

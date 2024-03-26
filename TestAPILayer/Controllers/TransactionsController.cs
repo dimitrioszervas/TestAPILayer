@@ -212,12 +212,11 @@ namespace TestAPILayer.Controllers
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
-            }
-                       
+            }      
 
             // Decode request's CBOR bytes
-            byte[] src = new byte[CryptoUtils.SRC_SIZE_8]; 
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
+            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8]; 
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID);
             Console.WriteLine("Login");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -225,44 +224,43 @@ namespace TestAPILayer.Controllers
             LoginRequest transactionObj =
                JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
 
-            // servers unwrap + store _KEYS to memory
+            // servers unwrap wKEYS using NONCE + store KEYS
             List<byte[]> ENCRYPTS = new List<byte[]>();
             List<byte[]> SIGNS = new List<byte[]>();
-            byte[] NONCE = KeyStore.Inst.GetNONCE(src);
+            byte[] NONCE = KeyStore.Inst.GetNONCE(deviceID);
             for (int i = 0; i < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; i++)
             {
                 byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[i]);
-                byte[] unwrapENCRYPT = new byte[32];// CryptoUtils.Unwrap(wENCRYPT, NONCE);
+                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, NONCE);
                 ENCRYPTS.Add(unwrapENCRYPT);
 
                 byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[i]);
-                byte[] unwrapSIGN = new byte[32];//CryptoUtils.Unwrap(wSIGN, NONCE);
+                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, NONCE);
                 SIGNS.Add(unwrapSIGN);
             }
-            KeyStore.Inst.StoreENCRYPTS(src, ENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(src, SIGNS);
+            KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
+            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
 
-            // servers store DS.PUB + DE.PUB + NONCE
-            KeyStore.Inst.StoreDS_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
-            //KeyStore.Inst.StoreDE_PUB(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB));
-            KeyStore.Inst.StoreNONCE(src, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));
-
-            // servers create SE[] = create ECDH keyPairECDH pair
+            // servers create SE[] = create ECDH key pair        
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
             for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
-                //ECDiffieHellmanCng keyPairECDH = CryptoUtils.CreateECDH();
-                SE_PUB.Add(new byte[32]);// keyPairECDH.PublicKey.ToByteArray();
-
-                SE_PRIV.Add(new byte[32]);// keyPairECDH.ExportECPrivateKey();
+                var keyPairECDH = CryptoUtils.CreateECDH();
+                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
+                SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
+
             //servers store SE.PRIV[]
-            KeyStore.Inst.StoreSE_PRIV(src, SE_PRIV);
+            KeyStore.Inst.StoreSE_PRIV(deviceID, SE_PRIV);
+
+            //  servers store DS PUB  + NONCE  
+            KeyStore.Inst.StoreDS_PUB(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
+            KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));         
 
             // response is wTOKEN, SE.PUB[]
             var cbor = CBORObject.NewMap()
-                .Add("wTOKEN", KeyStore.Inst.GetWTOKEN(src))
+                .Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID))
                 .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
 
             return Ok(cbor.EncodeToBytes());
