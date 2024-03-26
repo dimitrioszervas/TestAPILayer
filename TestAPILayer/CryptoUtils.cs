@@ -24,27 +24,27 @@ namespace TestAPILayer
         
         public const string OWNER_CODE = "1234";
        
-        public const int NUM_KEYS = Servers.NUM_SERVERS + 1;
+        public const int NUM_SIGNS_OR_ENCRYPTS = Servers.NUM_SERVERS + 1;
 
-        public const int KEY_SIZE32 = 32;
+        public const int KEY_SIZE_32 = 32;
 
         public const int TAG_SIZE = 16;
         public const int IV_SIZE = 12;
 
-        public const int SRC_SIZE8 = 8;
+        public const int SRC_SIZE_8 = 8;
 
         public static byte[] Decrypt(byte[] cipherData, byte[] key, byte[] nonceIn)
         {
 
-            // get raw privateKey spans
+            // get raw cngPrivateKeyBlob spans
             var encryptedData = cipherData.AsSpan();
 
-            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 privateKey           
+            var tagSizeBytes = 16; // 128 bit encryption / 8 bit = 16 cngPrivateKeyBlob           
 
             // ciphertext size is whole data - nonce - tag
             var cipherSize = encryptedData.Length - tagSizeBytes;
 
-            // extract nonce (nonce) 12 privateKey prefix          
+            // extract nonce (nonce) 12 cngPrivateKeyBlob prefix          
             byte[] nonce = new byte[12];
             Array.Copy(nonceIn, nonce, 8);
 
@@ -163,36 +163,52 @@ namespace TestAPILayer
         //private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x53, 0x31, 0x20, 0, 0, 0 };
         private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x4B, 0x31, 0x20, 0, 0, 0 };
 
-        public static CngKey ImportECDHPublicKeyToCngKey(byte[] publicKey)
+        public static byte [] ConvertRawECDHPublicKeyToCngKeyBlob(byte[] rawECDHPublicKey)
         {
             // For ECDH instead of ECDSA, change 0x53 to 0x4B.
+            // ECCPublicKeyBlob is formatted(for P256) as follows
+            // [KEY TYPE(4 bytes)][KEY LENGTH(4 bytes)][PUBLIC KEY(64 bytes)]
             var keyType = new byte[] { 0x45, 0x43, 0x4B, 0x31 };
             var keyLength = new byte[] { 0x20, 0x00, 0x00, 0x00 };
 
-            byte[] key = new byte[publicKey.Length - 1];
-            for (int i = 1; i < publicKey.Length; i++)
+            byte[] key = new byte[rawECDHPublicKey.Length - 1];
+            for (int i = 1; i < rawECDHPublicKey.Length; i++)
             {
-                key[i - 1] = publicKey[i];
+                key[i - 1] = rawECDHPublicKey[i];
             }
-            var keyImport = keyType.Concat(keyLength).Concat(key).ToArray();
-         
-            var cngKey = CngKey.Import(keyImport, CngKeyBlobFormat.EccPublicBlob);
 
-            return cngKey;
+            var cngKeyBlob = keyType.Concat(keyLength).Concat(key).ToArray();         
+           
+            return cngKeyBlob;
         }
 
-        public static byte[] DeriveECDHKey(byte[] publicKey, byte [] privateKey)
+        public static byte [] ConverCngKeyBlobToRaw(byte[] CngKeyBlob)
+        {
+            byte [] key = new byte[CngKeyBlob.Length - 7];
+            // PUBLIC KEY is the uncompressed format minus the
+            // leading byte (which is always 04 to signify an
+            // uncompressed key in other libraries)
+            key[0] = 4;
+            for (int i = 8; i < CngKeyBlob.Length; i++)
+            {
+                key[(i + 1) - 8] = CngKeyBlob[i]; 
+            }
+            return key;
+        }
+
+        public static byte[] DeriveECDHKey(byte[] publicKeyRaw, byte [] cngPrivateKeyBlob)
         {           
-            CngKey cngPrivateKey = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob);
+            CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
             
-            CngKey cngPublicKey = ImportECDHPublicKeyToCngKey(publicKey);
-           
+            byte [] cngPublicKeyBlob = ConvertRawECDHPublicKeyToCngKeyBlob(publicKeyRaw);
+            var cngPublicKey = CngKey.Import(cngPublicKeyBlob, CngKeyBlobFormat.EccPublicBlob);
+
             using (ECDiffieHellmanCng ecDiffieHellmanCng = new ECDiffieHellmanCng(cngPrivateKey))
             {
                 ecDiffieHellmanCng.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash;
                 ecDiffieHellmanCng.HashAlgorithm = CngAlgorithm.Sha256;
 
-                byte[] derivedECDHKey = null;// ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
+                byte[] derivedECDHKey = ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
                 
                 return derivedECDHKey;
             }
@@ -217,7 +233,7 @@ namespace TestAPILayer
 
             for (int i = 0; i <= n; i++)
             {
-                byte[] key = DeriveHKDFKey(baseKey, KEY_SIZE32, salt, info);
+                byte[] key = DeriveHKDFKey(baseKey, KEY_SIZE_32, salt, info);
                 keys.Add(key);
             }
 
@@ -304,7 +320,7 @@ namespace TestAPILayer
         {
             List<byte[]> encrypts = new List<byte[]>();
             List<byte[]> signs = new List<byte[]>();
-            byte[] ownerID = new byte[SRC_SIZE8];
+            byte[] ownerID = new byte[SRC_SIZE_8];
             string ownerCode = OWNER_CODE;
 
             string saltString = "";

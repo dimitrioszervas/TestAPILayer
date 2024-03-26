@@ -114,7 +114,7 @@ namespace TestAPILayer.Controllers
             }
 
             // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE8];
+            byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
 
             Console.WriteLine("Invite:");
@@ -153,7 +153,7 @@ namespace TestAPILayer.Controllers
             }
 
             // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE8];
+            byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src);
             Console.WriteLine("Register:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
@@ -174,7 +174,7 @@ namespace TestAPILayer.Controllers
             for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
                 var keyPairECDH = CryptoUtils.CreateECDH();
-                SE_PUB.Add(keyPairECDH.PublicKey);               
+                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));               
                 SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
@@ -217,7 +217,7 @@ namespace TestAPILayer.Controllers
                        
 
             // Decode request's CBOR bytes
-            byte[] src = new byte[CryptoUtils.SRC_SIZE8]; 
+            byte[] src = new byte[CryptoUtils.SRC_SIZE_8]; 
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src);
             Console.WriteLine("Login");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
@@ -230,7 +230,7 @@ namespace TestAPILayer.Controllers
             List<byte[]> ENCRYPTS = new List<byte[]>();
             List<byte[]> SIGNS = new List<byte[]>();
             byte[] NONCE = KeyStore.Inst.GetNONCE(src);
-            for (int i = 0; i < CryptoUtils.NUM_KEYS; i++)
+            for (int i = 0; i < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; i++)
             {
                 byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[i]);
                 byte[] unwrapENCRYPT = new byte[32];// CryptoUtils.Unwrap(wENCRYPT, NONCE);
