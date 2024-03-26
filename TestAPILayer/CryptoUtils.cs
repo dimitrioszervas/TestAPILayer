@@ -159,6 +159,11 @@ namespace TestAPILayer
             return key;
         }
 
+        public static byte[] ConvertInt32ToByteArray(Int32 I32)
+        {
+            return BitConverter.GetBytes(I32);
+        }
+
         // For ECDH instead of ECDSA, change 0x53 to 0x4B.
         //private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x53, 0x31, 0x20, 0, 0, 0 };
         private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x4B, 0x31, 0x20, 0, 0, 0 };
@@ -168,8 +173,9 @@ namespace TestAPILayer
             // For ECDH instead of ECDSA, change 0x53 to 0x4B.
             // ECCPublicKeyBlob is formatted(for P256) as follows
             // [KEY TYPE(4 bytes)][KEY LENGTH(4 bytes)][PUBLIC KEY(64 bytes)]
-            var keyType = new byte[] { 0x45, 0x43, 0x4B, 0x31 };
-            var keyLength = new byte[] { 0x20, 0x00, 0x00, 0x00 };
+            byte[] keyType = new byte[] { 0x45, 0x43, 0x4B, 0x31 };
+            //byte[] keyLength = { 0x20, 0, 0, 0 };
+            byte[] keyLength = ConvertInt32ToByteArray((rawECDHPublicKey.Length - 1) / 2);
 
             byte[] key = new byte[rawECDHPublicKey.Length - 1];
             for (int i = 1; i < rawECDHPublicKey.Length; i++)
