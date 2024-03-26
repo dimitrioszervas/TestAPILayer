@@ -162,11 +162,7 @@ namespace TestAPILayer
         public static byte[] ConvertInt32ToByteArray(Int32 I32)
         {
             return BitConverter.GetBytes(I32);
-        }
-
-        // For ECDH instead of ECDSA, change 0x53 to 0x4B.
-        //private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x53, 0x31, 0x20, 0, 0, 0 };
-        private static readonly byte[] s_cngBlobPrefix = { 0x45, 0x43, 0x4B, 0x31, 0x20, 0, 0, 0 };
+        }     
 
         public static byte [] ConvertRawECDHPublicKeyToCngKeyBlob(byte[] rawECDHPublicKey)
         {
