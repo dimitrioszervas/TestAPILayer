@@ -2,10 +2,10 @@
 {
     public sealed class RegisterRequest : BaseRequest
     {       
-        public string DS_PUB;
-        public string DE_PUB;
-        public string wTOKEN;
-        public string NONCE;
-        public string deviceID;
+        public string DS_PUB { get; set; }
+        public string DE_PUB { get; set; }
+        public string wTOKEN { get; set; }
+        public string NONCE { get; set; }
+        public string deviceID { get; set; }
     }
 }
