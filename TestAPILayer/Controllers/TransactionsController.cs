@@ -32,7 +32,7 @@ namespace TestAPILayer.Controllers
 
             src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
 
-            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGIN_ENCRYPTS(src);
+            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
 
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
@@ -66,7 +66,7 @@ namespace TestAPILayer.Controllers
            
             byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src, useLogins);
             
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGIN_SIGNS(src); 
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src); 
 
             bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
 
@@ -182,24 +182,16 @@ namespace TestAPILayer.Controllers
             // servers store DS PUB + wTOKEN + oldNONCE
             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);            
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
-            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);         
+            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);           
 
             // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-            List<byte[]> LOGIN_ENCRYPTS = new List<byte[]>();
-            List<byte[]> LOGIN_SIGNS = new List<byte[]>();
+            List<byte[]> LOGINS = new List<byte[]>();          
             for (int n = 0; n <= Servers.NUM_SERVERS; n++)
             {
-                byte[] derivedECDHEncrypt = CryptoUtils.ECDHDeriveEncrypt(SE_PRIV[n], DE_PUB);
-                LOGIN_ENCRYPTS.Add(derivedECDHEncrypt);
-                
-                Console.WriteLine($"{derivedECDHEncrypt.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHEncrypt)}");
-
-                byte[] derivedECDHSign = CryptoUtils.ECDHDeriveSign(SE_PRIV[n], DE_PUB);
-                LOGIN_SIGNS.Add(derivedECDHSign);
-               
+                byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
+                LOGINS.Add(derived);
             }
-            KeyStore.Inst.StoreLOGIN_ENCRYPTS(deviceID, LOGIN_ENCRYPTS);
-            KeyStore.Inst.StoreLOGIN_SIGNS(deviceID, LOGIN_SIGNS);
+            KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
 
             //  response is wTOKEN, SE.PUB[] 
             var cbor = CBORObject.NewMap()              

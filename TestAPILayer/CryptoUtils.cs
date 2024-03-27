@@ -170,8 +170,8 @@ namespace TestAPILayer
             // ECCPublicKeyBlob is formatted(for P256) as follows
             // [KEY TYPE(4 bytes)][KEY LENGTH(4 bytes)][PUBLIC KEY(64 bytes)]
             byte[] keyType = new byte[] { 0x45, 0x43, 0x4B, 0x31 };
-            //byte[] keyLength = { 0x20, 0, 0, 0 };
-            byte[] keyLength = ConvertInt32ToByteArray((rawECDHPublicKey.Length - 1) / 2);
+            byte[] keyLength = { 0x20, 0, 0, 0 };
+            //byte[] keyLength = ConvertInt32ToByteArray((rawECDHPublicKey.Length - 1) / 2);
 
             byte[] key = new byte[rawECDHPublicKey.Length - 1];
             for (int i = 1; i < rawECDHPublicKey.Length; i++)
@@ -198,7 +198,7 @@ namespace TestAPILayer
             return key;
         }
 
-        public static byte[] ECDHDeriveEncrypt(byte [] cngPrivateKeyBlob, byte[] publicKeyRaw)
+        public static byte[] ECDHDerive(byte [] cngPrivateKeyBlob, byte[] publicKeyRaw)
         {           
             CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
             
@@ -216,23 +216,6 @@ namespace TestAPILayer
             }
         }
 
-        public static byte[] ECDHDeriveSign(byte[] cngPrivateKeyBlob, byte[] publicKeyRaw)
-        {
-            CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
-
-            byte[] cngPublicKeyBlob = ConvertRawECDHPublicKeyToCngKeyBlob(publicKeyRaw);
-            var cngPublicKey = CngKey.Import(cngPublicKeyBlob, CngKeyBlobFormat.EccPublicBlob);
-
-            using (ECDiffieHellmanCng ecDiffieHellmanCng = new ECDiffieHellmanCng(cngPrivateKey))
-            {
-                ecDiffieHellmanCng.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hmac;              
-                ecDiffieHellmanCng.HashAlgorithm = CngAlgorithm.Sha256;
-
-                byte[] derivedECDHKey = ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
-
-                return derivedECDHKey;
-            }
-        }
 
         private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
         {
