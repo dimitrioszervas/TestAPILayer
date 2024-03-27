@@ -172,7 +172,7 @@ namespace TestAPILayer.Controllers
             // servers create SE[] = create ECDH key pair        
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int i = 0; i <= Servers.NUM_SERVERS; i++)
+            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
             {
                 var keyPairECDH = CryptoUtils.CreateECDH();
                 SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));               
@@ -187,16 +187,16 @@ namespace TestAPILayer.Controllers
             // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
             List<byte[]> LOGIN_ENCRYPTS = new List<byte[]>();
             List<byte[]> LOGIN_SIGNS = new List<byte[]>();
-            for (int i = 0; i <= Servers.NUM_SERVERS; i++)
+            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
             {
-                byte[] derivedECDHEncrypt = CryptoUtils.ECDHDeriveEncrypt(SE_PRIV[i], DE_PUB);
+                byte[] derivedECDHEncrypt = CryptoUtils.ECDHDeriveEncrypt(SE_PRIV[n], DE_PUB);
                 LOGIN_ENCRYPTS.Add(derivedECDHEncrypt);
+                
                 Console.WriteLine($"{derivedECDHEncrypt.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHEncrypt)}");
 
-                byte[] derivedECDHSign = CryptoUtils.ECDHDeriveSign(SE_PRIV[i], DE_PUB);
+                byte[] derivedECDHSign = CryptoUtils.ECDHDeriveSign(SE_PRIV[n], DE_PUB);
                 LOGIN_SIGNS.Add(derivedECDHSign);
-                //Console.WriteLine($"{derivedECDHSign.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHSign)}");
-
+               
             }
             KeyStore.Inst.StoreLOGIN_ENCRYPTS(deviceID, LOGIN_ENCRYPTS);
             KeyStore.Inst.StoreLOGIN_SIGNS(deviceID, LOGIN_SIGNS);
@@ -237,13 +237,13 @@ namespace TestAPILayer.Controllers
             List<byte[]> ENCRYPTS = new List<byte[]>();
             List<byte[]> SIGNS = new List<byte[]>();
             byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
-            for (int i = 0; i < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; i++)
+            for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
             {
-                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[i]);
+                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
                 byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
                 ENCRYPTS.Add(unwrapENCRYPT);
 
-                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[i]);
+                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
                 byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
                 SIGNS.Add(unwrapSIGN);
             }
@@ -253,7 +253,7 @@ namespace TestAPILayer.Controllers
             // servers create SE[] = create ECDH key pair        
             List<byte[]> SE_PUB = new List<byte[]>();
             List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int i = 0; i < Servers.NUM_SERVERS; i++)
+            for (int n = 0; n < Servers.NUM_SERVERS; n++)
             {
                 var keyPairECDH = CryptoUtils.CreateECDH();
                 SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
