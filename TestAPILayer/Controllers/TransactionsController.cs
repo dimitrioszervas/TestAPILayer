@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Transactions;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
 
@@ -34,7 +37,7 @@ namespace TestAPILayer.Controllers
             byte[][] dataShards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
             {
-                // we start invENCRYPTS[1] we don't use invENCRYPTS[0]
+                // we start inviteENCRYPTS[1] we don't use inviteENCRYPTS[0]
                 // we may have more than on shard per server 
                 int encryptsIndex = (i / numShardsPerServer) + 1; 
 
@@ -109,6 +112,8 @@ namespace TestAPILayer.Controllers
                 requestBytes = ms.ToArray();  
             }
 
+            //servers receive + validate the invite transaction
+
             // Decode request's CBOR bytes   
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src, false);
@@ -120,10 +125,10 @@ namespace TestAPILayer.Controllers
             InviteRequest transactionObj =
                JsonConvert.DeserializeObject<InviteRequest>(rebuiltDataJSON);
 
-            // servers store invite.KEYS (invite.SIGNS + invite.ENCRYPTS) using invite.id as the lookup          
+            // servers store invite.SIGNS + invite.ENCRYPTS for device.id = invite.id         
             byte[] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
-            KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.invENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.invSIGNS);
+            KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.inviteENCRYPTS);
+            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.inviteSIGNS);
 
             // response is just OK, but any response data must be encrypted + signed using owner.KEYS
             var cbor = CBORObject.NewMap().Add("INVITE", "SUCCESS");
@@ -184,11 +189,11 @@ namespace TestAPILayer.Controllers
             List<byte[]> LOGIN_SIGNS = new List<byte[]>();
             for (int i = 0; i <= Servers.NUM_SERVERS; i++)
             {
-                byte[] derivedECDHEncryptKey = CryptoUtils.DeriveECDHKeyEncrypt(DE_PUB, SE_PRIV[i]);
+                byte[] derivedECDHEncryptKey = CryptoUtils.ECDHDeriveEncrypt(SE_PRIV[i], DE_PUB);
                 LOGIN_ENCRYPTS.Add(derivedECDHEncryptKey);
                 Console.WriteLine($"{derivedECDHEncryptKey.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHEncryptKey)}");
 
-                byte[] derivedECDHSignKey = CryptoUtils.DeriveECDHKeySign(DE_PUB, SE_PRIV[i]);
+                byte[] derivedECDHSignKey = CryptoUtils.ECDHDeriveSign(SE_PRIV[i], DE_PUB);
                 LOGIN_SIGNS.Add(derivedECDHSignKey);
                 //Console.WriteLine($"{derivedECDHSignKey.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHSignKey)}");
 

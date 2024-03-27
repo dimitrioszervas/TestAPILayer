@@ -198,7 +198,7 @@ namespace TestAPILayer
             return key;
         }
 
-        public static byte[] DeriveECDHKeyEncrypt(byte[] publicKeyRaw, byte [] cngPrivateKeyBlob)
+        public static byte[] ECDHDeriveEncrypt(byte [] cngPrivateKeyBlob, byte[] publicKeyRaw)
         {           
             CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
             
@@ -216,7 +216,7 @@ namespace TestAPILayer
             }
         }
 
-        public static byte[] DeriveECDHKeySign(byte[] publicKeyRaw, byte[] cngPrivateKeyBlob)
+        public static byte[] ECDHDeriveSign(byte[] cngPrivateKeyBlob, byte[] publicKeyRaw)
         {
             CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
 
