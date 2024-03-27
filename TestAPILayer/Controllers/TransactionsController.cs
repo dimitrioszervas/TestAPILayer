@@ -189,13 +189,13 @@ namespace TestAPILayer.Controllers
             List<byte[]> LOGIN_SIGNS = new List<byte[]>();
             for (int i = 0; i <= Servers.NUM_SERVERS; i++)
             {
-                byte[] derivedECDHEncryptKey = CryptoUtils.ECDHDeriveEncrypt(SE_PRIV[i], DE_PUB);
-                LOGIN_ENCRYPTS.Add(derivedECDHEncryptKey);
-                Console.WriteLine($"{derivedECDHEncryptKey.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHEncryptKey)}");
+                byte[] derivedECDHEncrypt = CryptoUtils.ECDHDeriveEncrypt(SE_PRIV[i], DE_PUB);
+                LOGIN_ENCRYPTS.Add(derivedECDHEncrypt);
+                Console.WriteLine($"{derivedECDHEncrypt.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHEncrypt)}");
 
-                byte[] derivedECDHSignKey = CryptoUtils.ECDHDeriveSign(SE_PRIV[i], DE_PUB);
-                LOGIN_SIGNS.Add(derivedECDHSignKey);
-                //Console.WriteLine($"{derivedECDHSignKey.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHSignKey)}");
+                byte[] derivedECDHSign = CryptoUtils.ECDHDeriveSign(SE_PRIV[i], DE_PUB);
+                LOGIN_SIGNS.Add(derivedECDHSign);
+                //Console.WriteLine($"{derivedECDHSign.Length}: {CryptoUtils.ByteArrayToStringDebug(derivedECDHSign)}");
 
             }
             KeyStore.Inst.StoreLOGIN_ENCRYPTS(deviceID, LOGIN_ENCRYPTS);
