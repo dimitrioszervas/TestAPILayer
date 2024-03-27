@@ -198,7 +198,7 @@ namespace TestAPILayer
             return key;
         }
 
-        public static byte[] DeriveECDHKey(byte[] publicKeyRaw, byte [] cngPrivateKeyBlob)
+        public static byte[] DeriveECDHKeyEncrypt(byte[] publicKeyRaw, byte [] cngPrivateKeyBlob)
         {           
             CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
             
@@ -212,6 +212,24 @@ namespace TestAPILayer
 
                 byte[] derivedECDHKey = ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
                 
+                return derivedECDHKey;
+            }
+        }
+
+        public static byte[] DeriveECDHKeySign(byte[] publicKeyRaw, byte[] cngPrivateKeyBlob)
+        {
+            CngKey cngPrivateKey = CngKey.Import(cngPrivateKeyBlob, CngKeyBlobFormat.EccPrivateBlob);
+
+            byte[] cngPublicKeyBlob = ConvertRawECDHPublicKeyToCngKeyBlob(publicKeyRaw);
+            var cngPublicKey = CngKey.Import(cngPublicKeyBlob, CngKeyBlobFormat.EccPublicBlob);
+
+            using (ECDiffieHellmanCng ecDiffieHellmanCng = new ECDiffieHellmanCng(cngPrivateKey))
+            {
+                ecDiffieHellmanCng.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hmac;              
+                ecDiffieHellmanCng.HashAlgorithm = CngAlgorithm.Sha256;
+
+                byte[] derivedECDHKey = ecDiffieHellmanCng.DeriveKeyMaterial(cngPublicKey);
+
                 return derivedECDHKey;
             }
         }
