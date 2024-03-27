@@ -1,12 +1,8 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
-using System.ComponentModel;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using TestAPILayer.ReedSolomon;
 using TestAPILayer.Requests;
 
@@ -194,7 +190,7 @@ namespace TestAPILayer.Controllers
 
             //  response is wTOKEN, SE.PUB[] 
             var cbor = CBORObject.NewMap()              
-                .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
+                .Add("SE_PUB", SE_PUB);
 
             return Ok(cbor.EncodeToBytes());
         }
@@ -261,7 +257,7 @@ namespace TestAPILayer.Controllers
             // response is wTOKEN, SE.PUB[]
             var cbor = CBORObject.NewMap()
                 .Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID))
-                .Add("SE_PUB", CBORObject.NewArray().Add(SE_PUB));
+                .Add("SE_PUB", SE_PUB);
 
             return Ok(cbor.EncodeToBytes());
         }
