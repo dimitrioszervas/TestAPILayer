@@ -185,6 +185,7 @@ namespace TestAPILayer.Controllers
             {
                 byte[] derivedECDHKey = CryptoUtils.DeriveECDHKey(DE_PUB, SE_PRIV[i]);
                 LOGINS.Add(derivedECDHKey);
+                Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(derivedECDHKey));
             }
             KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
 
