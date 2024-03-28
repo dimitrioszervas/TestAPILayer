@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PeterO.Cbor;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -162,9 +163,7 @@ namespace TestAPILayer.Controllers
 
             RegisterRequest transactionObj =
                JsonConvert.DeserializeObject<RegisterRequest>(rebuiltDataJSON);
-          
-            byte[] DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB);
-            byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
+                   
             byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
             byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
             byte[] deviceID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.deviceID);
@@ -179,13 +178,79 @@ namespace TestAPILayer.Controllers
                 SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
-            // servers store DS PUB + wTOKEN + oldNONCE
-            KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);            
+            // servers store wTOKEN + NONCE                    
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
-            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);           
+            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);
+
+
+            // server response is ok
+            var cbor = CBORObject.NewMap().Add("REGISTER", "SUCCESS");
+
+            return Ok(cbor.EncodeToBytes());
+        }
+
+        // Register endpoint
+        [HttpPost]
+        [Route("Rekey")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> Rekey()
+        {
+            byte[] requestBytes;
+            using (var ms = new MemoryStream())
+            {
+                await Request.Body.CopyToAsync(ms);
+                requestBytes = ms.ToArray();
+            }
+
+            // Decode request's CBOR bytes   
+            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, false);
+            Console.WriteLine("Rekey:");
+            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+            Console.WriteLine();
+
+            RekeyRequest transactionObj =
+               JsonConvert.DeserializeObject<RekeyRequest>(rebuiltDataJSON);
+
+            byte[] DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB);
+            byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
+            byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
+         
+            // servers create SE[] = create ECDH key pair        
+            List<byte[]> SE_PUB = new List<byte[]>();
+            List<byte[]> SE_PRIV = new List<byte[]>();
+            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
+            {
+                var keyPairECDH = CryptoUtils.CreateECDH();
+                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
+                SE_PRIV.Add(keyPairECDH.PrivateKey);
+            }
+
+            // servers unwrap wKEYS using oldNONCE + store KEYS
+            List<byte[]> ENCRYPTS = new List<byte[]>();
+            List<byte[]> SIGNS = new List<byte[]>();
+            byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
+            for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
+            {
+                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
+                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
+                ENCRYPTS.Add(unwrapENCRYPT);
+
+                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
+                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
+                SIGNS.Add(unwrapSIGN);
+            }
+            KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
+            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
+
+            // servers store DS PUB + oldNONCE
+            KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
+            KeyStore.Inst.StoreNONCE(deviceID, NONCE);           
 
             // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-            List<byte[]> LOGINS = new List<byte[]>();          
+            List<byte[]> LOGINS = new List<byte[]>();
             for (int n = 0; n <= Servers.NUM_SERVERS; n++)
             {
                 byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
@@ -193,12 +258,16 @@ namespace TestAPILayer.Controllers
             }
             KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
 
+            byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);
+
             //  response is wTOKEN, SE.PUB[] 
-            var cbor = CBORObject.NewMap()              
+            var cbor = CBORObject.NewMap()
+                .Add("wTOKEN", wTOKEN)
                 .Add("SE_PUB", SE_PUB);
 
             return Ok(cbor.EncodeToBytes());
         }
+
 
         // Login endpoint
         [HttpPost]
