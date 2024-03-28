@@ -228,7 +228,7 @@ namespace TestAPILayer.Controllers
                 SE_PRIV.Add(keyPairECDH.PrivateKey);
             }
 
-            // servers unwrap wKEYS using oldNONCE + store KEYS
+            // servers unwrap wKEYS using NONCE + store KEYS
             List<byte[]> ENCRYPTS = new List<byte[]>();
             List<byte[]> SIGNS = new List<byte[]>();
             byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
@@ -245,7 +245,7 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
             KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
 
-            // servers store DS PUB + oldNONCE
+            // servers store DS PUB + NONCE
             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);           
 
@@ -282,9 +282,10 @@ namespace TestAPILayer.Controllers
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
-            }      
+            }
 
             // Decode request's CBOR bytes
+            // servers receive + validate the login transaction
             byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8]; 
             string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, true);
             Console.WriteLine("Login");
@@ -294,44 +295,32 @@ namespace TestAPILayer.Controllers
             LoginRequest transactionObj =
                JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
 
-            // servers unwrap wKEYS using oldNONCE + store KEYS
+            // servers get LOGINS[] for device
+            // servers SIGNS[] = ENCRYPTS[] = LOGINS[]                
+            List<byte[]> LOGINS = KeyStore.Inst.GetLOGINS(deviceID);
+
+            // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
             List<byte[]> ENCRYPTS = new List<byte[]>();
             List<byte[]> SIGNS = new List<byte[]>();
-            byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
+            byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);// KeyStore.Inst.GetNONCE(deviceID);
             for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
             {
                 byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
-                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
+                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, NONCE);
                 ENCRYPTS.Add(unwrapENCRYPT);
 
                 byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
-                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
+                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, NONCE);
                 SIGNS.Add(unwrapSIGN);
             }
             KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
+            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);                       
 
-            // servers create SE[] = create ECDH key pair        
-            List<byte[]> SE_PUB = new List<byte[]>();
-            List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int n = 0; n < Servers.NUM_SERVERS; n++)
-            {
-                var keyPairECDH = CryptoUtils.CreateECDH();
-                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
-                SE_PRIV.Add(keyPairECDH.PrivateKey);
-            }
-
-            //servers store SE.PRIV[]
-            KeyStore.Inst.StoreSE_PRIV(deviceID, SE_PRIV);
-
-            //  servers store DS PUB  + oldNONCE  
-            KeyStore.Inst.StoreDS_PUB(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB));
-            KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));         
-
-            // response is wTOKEN, SE.PUB[]
-            var cbor = CBORObject.NewMap()
-                .Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID))
-                .Add("SE_PUB", SE_PUB);
+            // servers store NONCE? 
+            // KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE)); 
+            
+            // servers response = wTOKEN   
+            var cbor = CBORObject.NewMap().Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID));
 
             return Ok(cbor.EncodeToBytes());
         }
