@@ -327,35 +327,11 @@ namespace TestAPILayer
             {
                 aesAlgorithm.KeySize = 256;
                 aesAlgorithm.GenerateKey();
-                string keyBase64 = Convert.ToBase64String(aesAlgorithm.Key);
-                Console.WriteLine($"Aes Key Size : {aesAlgorithm.KeySize}");
-                Console.WriteLine("Here is the Aes key in Base64:");
-                Console.WriteLine(keyBase64);
+                string keyBase64 = Convert.ToBase64String(aesAlgorithm.Key);               
 
                 return aesAlgorithm.Key;
             }
         }
-
-        /*
-       export async function deriveRawSecret(code, ID) {
-  
-  const hashed = await window.crypto.subtle.digest('SHA-256', textToBytes(code));
-  
-  const hkdfKey = await window.crypto.subtle.importKey(
-    "raw",
-    hashed,
-    { name: 'HKDF' },
-    false,
-    ["deriveKey", "deriveBits"]
-  );
-
-  const result = await deriveRawKey(hkdfKey, ID, textToBytes("SECRET"), 256);
-
-  return new Uint8Array(result);
-}
-
-}
-         */
       
         static byte [] ComputeSha256Hash(byte [] rawData)
         {
@@ -387,7 +363,6 @@ namespace TestAPILayer
 
             return result;
         }
-
 
         public static void GenerateOwnerKeys()
         {
