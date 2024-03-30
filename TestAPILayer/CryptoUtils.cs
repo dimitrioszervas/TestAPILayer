@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Org.BouncyCastle.Asn1.Pkcs;
+using Org.BouncyCastle.Bcpg;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -334,20 +336,75 @@ namespace TestAPILayer
             }
         }
 
+        /*
+       export async function deriveRawSecret(code, ID) {
+  
+  const hashed = await window.crypto.subtle.digest('SHA-256', textToBytes(code));
+  
+  const hkdfKey = await window.crypto.subtle.importKey(
+    "raw",
+    hashed,
+    { name: 'HKDF' },
+    false,
+    ["deriveKey", "deriveBits"]
+  );
+
+  const result = await deriveRawKey(hkdfKey, ID, textToBytes("SECRET"), 256);
+
+  return new Uint8Array(result);
+}
+
+}
+         */
+      
+        static byte [] ComputeSha256Hash(byte [] rawData)
+        {
+            // Create a SHA256
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                // ComputeHash - returns byte array
+                byte[] bytes = sha256Hash.ComputeHash(rawData);
+
+                return bytes;
+            }
+        }
+
+        public static byte[] DeriveRawID(string code)
+        {
+            byte[] hashed = ComputeSha256Hash(Encoding.UTF8.GetBytes(code));
+            byte[] salt = Encoding.UTF8.GetBytes("");
+            byte[] info = Encoding.UTF8.GetBytes("ID");
+            byte[] result = DeriveHKDF8Key(hashed, salt, info);
+
+            return result;
+        }
+
+        static byte[] DeriveRawSecret(string code, byte[] ID)
+        {
+            byte[] hashed = ComputeSha256Hash(Encoding.UTF8.GetBytes(code));         
+            byte[] info = Encoding.UTF8.GetBytes("SECRET");
+            byte[] result = DeriveHKDF32Key(hashed, ID, info);
+
+            return result;
+        }
+
 
         public static void GenerateOwnerKeys()
         {
             List<byte[]> encrypts = new List<byte[]>();
             List<byte[]> signs = new List<byte[]>();
-            byte[] ownerID = new byte[SRC_SIZE_8];
+            byte[] scr = new byte[SRC_SIZE_8];
             string ownerCode = OWNER_CODE;
+            byte[] ownerID = DeriveRawID(ownerCode);
+           
 
             string saltString = "";
 
-            byte[] secret = Encoding.UTF8.GetBytes(ownerCode);
+            byte[] secret = DeriveRawSecret(ownerCode, ownerID);
+           
             byte[] salt = Encoding.UTF8.GetBytes(saltString);
 
-            GenerateKeys(ref encrypts, ref signs, ref ownerID, secret, salt, Servers.NUM_SERVERS);
+            GenerateKeys(ref encrypts, ref signs, ref scr, secret, salt, Servers.NUM_SERVERS);
 
             KeyStore.Inst.StoreENCRYPTS(ownerID, encrypts);
             KeyStore.Inst.StoreSIGNS(ownerID, signs);
