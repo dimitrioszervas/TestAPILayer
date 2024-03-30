@@ -220,22 +220,22 @@ namespace TestAPILayer
         private static List<byte[]> GenerateNKeys(int n, byte[] src, KeyType type, byte[] baseKey)
         {
             List<byte[]> keys = new List<byte[]>();
-            byte[] salt, info;
-
-            if (type == KeyType.SIGN)
-            {
-                salt = src; // salt needed to generate keys
-                info = Encoding.UTF8.GetBytes("signs");
-            }
-            else
-            {
-
-                salt = src; // salt needed to generate keys
-                info = Encoding.UTF8.GetBytes("encrypts");
-            }
+            byte[] salt, info;                   
 
             for (int i = 0; i <= n; i++)
             {
+                if (type == KeyType.SIGN)
+                {
+                    salt = src; // salt needed to generate keys
+                    info = Encoding.UTF8.GetBytes("SIGNS" + i);
+                }
+                else
+                {
+
+                    salt = src; // salt needed to generate keys
+                    info = Encoding.UTF8.GetBytes("ENCRYPTS" + i);
+                }
+
                 byte[] key = DeriveHKDFKey(baseKey, KEY_SIZE_32, salt, info);
                 keys.Add(key);
             }
@@ -245,13 +245,13 @@ namespace TestAPILayer
 
         public static void GenerateKeys(ref List<byte[]> encrypts, ref List<byte[]> signs, ref byte[] srcOut, byte [] secret, byte[] salt, int n)
         {    
-            byte[] src = DeriveHKDF8Key(secret, salt, Encoding.UTF8.GetBytes("src"));
+            byte[] src = DeriveHKDF8Key(secret, salt, Encoding.UTF8.GetBytes("SRC"));
 
             salt = src;
 
-            byte[] sign = DeriveHKDF32Key(secret, salt, Encoding.UTF8.GetBytes("sign"));           
+            byte[] sign = DeriveHKDF32Key(secret, salt, Encoding.UTF8.GetBytes("SIGN"));           
 
-            byte[] encrypt = DeriveHKDF32Key(secret, salt, Encoding.UTF8.GetBytes("encrypt"));           
+            byte[] encrypt = DeriveHKDF32Key(secret, salt, Encoding.UTF8.GetBytes("ENCRYPT"));           
 
             encrypts = GenerateNKeys(n, salt, KeyType.ENCRYPT, encrypt);
             signs = GenerateNKeys(n, salt, KeyType.SIGN, sign);
@@ -318,6 +318,22 @@ namespace TestAPILayer
 
             return unwrappedData;            
         }
+
+        public static byte [] generateRawKey()
+        {
+            using (Aes aesAlgorithm = Aes.Create())
+            {
+                aesAlgorithm.KeySize = 256;
+                aesAlgorithm.GenerateKey();
+                string keyBase64 = Convert.ToBase64String(aesAlgorithm.Key);
+                Console.WriteLine($"Aes Key Size : {aesAlgorithm.KeySize}");
+                Console.WriteLine("Here is the Aes key in Base64:");
+                Console.WriteLine(keyBase64);
+
+                return aesAlgorithm.Key;
+            }
+        }
+
 
         public static void GenerateOwnerKeys()
         {
