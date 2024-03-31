@@ -320,5 +320,38 @@ namespace TestAPILayer.Controllers
 
             return Ok(cbor.EncodeToBytes());
         }
+
+        // Session endpoint
+        [HttpPost]
+        [Route("Session")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> Session()
+        {
+            byte[] requestBytes;
+            using (var ms = new MemoryStream())
+            {
+                await Request.Body.CopyToAsync(ms);
+                requestBytes = ms.ToArray();
+            }
+
+            // Decode request's CBOR bytes
+            // servers receive + validate the login transaction
+            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, true);
+            Console.WriteLine("Session");
+            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
+            Console.WriteLine();
+
+            SessionRequest transactionObj =
+               JsonConvert.DeserializeObject<SessionRequest>(rebuiltDataJSON);
+                            
+
+            // servers response = Ok   
+            var cbor = CBORObject.NewMap().Add("MSG", transactionObj.MSG);
+
+            return Ok(cbor.EncodeToBytes());
+        }
     }
 }
