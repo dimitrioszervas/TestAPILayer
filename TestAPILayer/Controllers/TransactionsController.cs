@@ -339,7 +339,7 @@ namespace TestAPILayer.Controllers
             // Decode request's CBOR bytes
             // servers receive + validate the login transaction
             byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, true);
+            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, false);
             Console.WriteLine("Session");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
