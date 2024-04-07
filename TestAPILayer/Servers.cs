@@ -79,15 +79,8 @@ namespace TestAPILayer
 
             return true;
         }
-
-     
-        /// <summary>
-        /// Makes an asyncrinoous Post request.
-        /// </summary>
-        /// <param name="httpClient"></param>
-        /// <param name="shardsPacket"></param>
-        /// <param name="endPoint"></param>
-        /// <returns>json string</returns>
+            
+      
         private async Task<string> PostAsync(HttpClient httpClient, byte[] bytes, string endPoint)
         {
             using (var content = new ByteArrayContent(bytes))
