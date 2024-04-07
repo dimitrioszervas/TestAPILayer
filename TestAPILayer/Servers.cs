@@ -211,7 +211,10 @@ namespace TestAPILayer
                             return;
                         }
 
-                        //Console.WriteLine($"{jsonResponse}");
+                        if (endPoint.Equals("api/Transactions/Rekey"))
+                        {
+                            Console.WriteLine($"{jsonResponse}");
+                        }
                         if (jsonResponse != null)
                         {
                             ShardsPacket receivedShardPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonResponse);

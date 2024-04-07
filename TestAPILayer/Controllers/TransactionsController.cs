@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Org.BouncyCastle.Asn1.Ocsp;
 using PeterO.Cbor;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using TestAPILayer.Contracts;
 using TestAPILayer.ReedSolomon;
 
@@ -287,14 +289,20 @@ namespace TestAPILayer.Controllers
             string endPoint = "api/Transactions/Rekey";
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
 
+            Console.WriteLine($"Size: {response.Length}");
+            Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(response));
+
             if (response == null)
             {
                 return BadRequest("failed to Rekey!");
             }
-            var responseCBOR = CBORObject.DecodeFromBytes(response);
+
+            string json = Encoding.UTF8.GetString(response);
+            Console.WriteLine(json);
+            var responseCBOR = CBORObject.FromJSONBytes(response);
             
-            Console.WriteLine(responseCBOR.ToJSONString());
-            return Ok(response);
+            //Console.WriteLine(responseCBOR.ToJSONString());
+            return Ok(responseCBOR.EncodeToBytes());
             /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
