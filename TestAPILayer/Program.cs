@@ -1,4 +1,6 @@
 using TestAPILayer;
+using TestAPILayer.Contracts;
+using TestAPILayer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<IClientService, ClientService>();
 
 var app = builder.Build();
 
@@ -32,5 +36,6 @@ app.MapControllers();
 
 
 CryptoUtils.GenerateOwnerKeys();
+Servers.Instance.LoadSettings();
 
 app.Run();
