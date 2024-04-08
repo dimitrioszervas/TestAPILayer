@@ -151,27 +151,26 @@ namespace TestAPILayer.Controllers
         //public async Task<HttpResponseMessage> PostTransaction()
         {
             Console.WriteLine("TransactionsController Invite");
-            /*
+           
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();  
             }
-
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] shardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(shardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
 
-            List<byte[]> signs = KeyStore.Inst.GetSIGNS(src);
+            //List<byte[]> signs = KeyStore.Inst.GetSIGNS(src);
 
-            bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
+            //bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
 
-            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
+            //Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
 
             string endPoint = "api/Transactions/Invite";
@@ -183,9 +182,9 @@ namespace TestAPILayer.Controllers
             }        
 
             return Ok(response);
-            */
+            /*
             //servers receive + validate the invite transaction
-
+            
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -214,7 +213,8 @@ namespace TestAPILayer.Controllers
 
             //return Ok(cbor.ToJSONString());
             //return ReturnBytes(cbor.EncodeToBytes());
-            return Ok(cbor.EncodeToBytes());           
+            return Ok(cbor.EncodeToBytes());
+            */
         }
 
         // Register endpoint
@@ -226,7 +226,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Register()
         {
             Console.WriteLine("TransactionsController Register");
-            /*
+           
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -251,7 +251,8 @@ namespace TestAPILayer.Controllers
             }
 
             return Ok(response);
-            */
+
+            /*
             
             byte[] requestBytes;
             using (var ms = new MemoryStream())
@@ -289,11 +290,11 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
             KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);
 
-
             // server response is ok
             var cbor = CBORObject.NewMap().Add("REGISTER", "SUCCESS");
 
-            return Ok(cbor.EncodeToBytes());           
+            return Ok(cbor.EncodeToBytes());    
+            */
         }
 
         // Register endpoint
@@ -305,7 +306,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Rekey()
         {
             Console.WriteLine("TransactionsController Rekey");
-            /*
+            
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -338,7 +339,7 @@ namespace TestAPILayer.Controllers
             
             //Console.WriteLine(responseCBOR.ToJSONString());
             return Ok(responseCBOR.EncodeToBytes());
-            */
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -401,7 +402,7 @@ namespace TestAPILayer.Controllers
             }
             KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
 
-            byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);
+            byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);       
 
             //  response is wTOKEN, SE.PUB[] 
             var cbor = CBORObject.NewMap()
@@ -409,7 +410,7 @@ namespace TestAPILayer.Controllers
                 .Add("SE_PUB", SE_PUB);
 
             return Ok(cbor.EncodeToBytes());
-           
+           */
         }
 
 
@@ -422,7 +423,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Login()
         {
             Console.WriteLine("TransactionsController Login");
-            /*
+           
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -447,7 +448,7 @@ namespace TestAPILayer.Controllers
             }
 
             return Ok(response);
-            */
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -486,15 +487,16 @@ namespace TestAPILayer.Controllers
                 SIGNS.Add(unwrapSIGN);
             }
             KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);                       
+            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
 
             // servers store NONCE? 
-            // KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE)); 
-            
+            // KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE));  
+
             // servers response = wTOKEN   
             var cbor = CBORObject.NewMap().Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID));
 
-            return Ok(cbor.EncodeToBytes());           
+            return Ok(cbor.EncodeToBytes());  
+            */
         }
 
         // Session endpoint
@@ -506,7 +508,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Session()
         {
             Console.WriteLine("TransactionsController Session");
-            /*
+            
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -531,7 +533,7 @@ namespace TestAPILayer.Controllers
             }
 
             return Ok(response);
-            */
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -550,12 +552,13 @@ namespace TestAPILayer.Controllers
 
             SessionRequest transactionObj =
                JsonConvert.DeserializeObject<SessionRequest>(rebuiltDataJSON);
-                            
+           
 
             // servers response = Ok   
             var cbor = CBORObject.NewMap().Add("MSG", transactionObj.MSG);
 
-            return Ok(cbor.EncodeToBytes());           
+            return Ok(cbor.EncodeToBytes()); 
+            */
         }
     }
 }
