@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using Org.BouncyCastle.Asn1.Ocsp;
 using PeterO.Cbor;
 using System.Net;
@@ -6,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using TestAPILayer.Contracts;
 using TestAPILayer.ReedSolomon;
+using TestAPILayer.Requests;
 
 namespace TestAPILayer.Controllers
 {
@@ -32,16 +34,12 @@ namespace TestAPILayer.Controllers
             // allocate memory for the data shards byte matrix
             // Last element in the string array is not a shard but the loginID array 
             int numShards = shardsCBOR.Values.Count - 1;
-            int numShardsPerServer = numShards / Servers.NUM_SERVERS;
-
+          
             src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();           
 
             byte[][] shards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
-            {               
-                // we may have more than on shard per server 
-                int encryptsIndex = (i / numShardsPerServer) + 1; 
-
+            {  
                 byte[] encryptedShard = shardsCBOR[i].GetByteString();
                              
                 // copy shard to shard matrix
@@ -50,29 +48,61 @@ namespace TestAPILayer.Controllers
             }                          
 
             return shards;          
-        }                    
-       
-        public static string GetTransactionFromCBOR(byte[] requestBytes, ref byte[] src, bool useLogins)
+        }
+
+        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, ref byte[] src, bool useLogins)
+        {
+            CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
+
+            // allocate memory for the data shards byte matrix
+            // Last element in the string array is not a shard but the loginID array 
+            int numShards = shardsCBOR.Values.Count - 1;
+            int numShardsPerServer = numShards / Servers.NUM_SERVERS;
+
+            src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
+
+            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
+
+            byte[][] shards = new byte[numShards][];
+            for (int i = 0; i < numShards; i++)
+            {
+                // we may have more than on shard per server 
+                int keyIndex = (i / numShardsPerServer) + 1;
+
+                byte[] encryptedShard = shardsCBOR[i].GetByteString();
+
+                // decrypt shard                
+                byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], src);
+
+                // copy shard to shard matrix
+                shards[i] = new byte[shard.Length];
+                Array.Copy(shard, shards[i], shard.Length);
+            }
+
+            return shards;
+        }
+
+        public static string GetAndVerifyTransactionFromCBOR(byte[] requestBytes, ref byte[][] shards, ref byte[] src, bool useLogins)
         {
             // Decode request's CBOR bytes  
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBORBytes = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
-           
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
-            
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src); 
 
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
+            shards = GetShardsFromCBOR(shardsCBORBytes, ref src, useLogins);
 
-            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+
+            bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
+
+            Console.WriteLine($"CBOR Shards Verified: {verified}");
 
             // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
 
-            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
+            byte[] cborData = ReedSolomonUtils.RebuildDataUsingReeedSolomon(shards);
 
-            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
+            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborData);
 
             string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
 
@@ -121,7 +151,7 @@ namespace TestAPILayer.Controllers
         //public async Task<HttpResponseMessage> PostTransaction()
         {
             Console.WriteLine("TransactionsController Invite");
-
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -132,14 +162,14 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBORBytes = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBORBytes, ref src);
 
             List<byte[]> signs = KeyStore.Inst.GetSIGNS(src);
 
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
+            bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
 
             Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
@@ -153,13 +183,20 @@ namespace TestAPILayer.Controllers
             }        
 
             return Ok(response);
-           
+            */
             //servers receive + validate the invite transaction
-            /*
-            // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src, false);
 
+            byte[] requestBytes;
+            using (var ms = new MemoryStream())
+            {
+                await Request.Body.CopyToAsync(ms);
+                requestBytes = ms.ToArray();
+            }
+
+            byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
+            byte[][] shards = new byte[1][];
+            string rebuiltDataJSON = GetAndVerifyTransactionFromCBOR(requestBytes, ref shards, ref src, false);
+           
             Console.WriteLine("PostTransaction:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -177,9 +214,7 @@ namespace TestAPILayer.Controllers
 
             //return Ok(cbor.ToJSONString());
             //return ReturnBytes(cbor.EncodeToBytes());
-            return Ok(cbor.EncodeToBytes());
-            */
-          
+            return Ok(cbor.EncodeToBytes());           
         }
 
         // Register endpoint
@@ -191,7 +226,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Register()
         {
             Console.WriteLine("TransactionsController Register");
-
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -216,8 +251,8 @@ namespace TestAPILayer.Controllers
             }
 
             return Ok(response);
-          
-            /*
+            */
+            
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -227,7 +262,8 @@ namespace TestAPILayer.Controllers
 
             // Decode request's CBOR bytes   
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes,ref src, false);
+            byte[][] shards = new byte[1][];
+            string rebuiltDataJSON = GetAndVerifyTransactionFromCBOR(requestBytes, ref shards, ref src, false);
             Console.WriteLine("Register:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -257,8 +293,7 @@ namespace TestAPILayer.Controllers
             // server response is ok
             var cbor = CBORObject.NewMap().Add("REGISTER", "SUCCESS");
 
-            return Ok(cbor.EncodeToBytes());
-            */
+            return Ok(cbor.EncodeToBytes());           
         }
 
         // Register endpoint
@@ -270,7 +305,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Rekey()
         {
             Console.WriteLine("TransactionsController Rekey");
-
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -303,7 +338,7 @@ namespace TestAPILayer.Controllers
             
             //Console.WriteLine(responseCBOR.ToJSONString());
             return Ok(responseCBOR.EncodeToBytes());
-            /*
+            */
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -313,7 +348,8 @@ namespace TestAPILayer.Controllers
 
             // Decode request's CBOR bytes   
             byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, false);
+            byte[][] shards = new byte[1][];
+            string rebuiltDataJSON = GetAndVerifyTransactionFromCBOR(requestBytes, ref shards, ref deviceID, false);
             Console.WriteLine("Rekey:");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -373,7 +409,7 @@ namespace TestAPILayer.Controllers
                 .Add("SE_PUB", SE_PUB);
 
             return Ok(cbor.EncodeToBytes());
-            */
+           
         }
 
 
@@ -386,7 +422,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Login()
         {
             Console.WriteLine("TransactionsController Login");
-
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -411,7 +447,7 @@ namespace TestAPILayer.Controllers
             }
 
             return Ok(response);
-            /*
+            */
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -421,8 +457,9 @@ namespace TestAPILayer.Controllers
 
             // Decode request's CBOR bytes
             // servers receive + validate the login transaction
-            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8]; 
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, true);
+            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
+            byte[][] shards = new byte[1][];
+            string rebuiltDataJSON = GetAndVerifyTransactionFromCBOR(requestBytes, ref shards, ref deviceID, true);
             Console.WriteLine("Login");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -457,8 +494,7 @@ namespace TestAPILayer.Controllers
             // servers response = wTOKEN   
             var cbor = CBORObject.NewMap().Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID));
 
-            return Ok(cbor.EncodeToBytes());
-            */
+            return Ok(cbor.EncodeToBytes());           
         }
 
         // Session endpoint
@@ -470,7 +506,7 @@ namespace TestAPILayer.Controllers
         public async Task<ActionResult> Session()
         {
             Console.WriteLine("TransactionsController Session");
-
+            /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -495,7 +531,7 @@ namespace TestAPILayer.Controllers
             }
 
             return Ok(response);
-            /*
+            */
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -506,7 +542,8 @@ namespace TestAPILayer.Controllers
             // Decode request's CBOR bytes
             // servers receive + validate the login transaction
             byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, false);
+            byte[][] shards = new byte[1][];
+            string rebuiltDataJSON = GetAndVerifyTransactionFromCBOR(requestBytes, ref shards, ref deviceID, false);
             Console.WriteLine("Session");
             Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
             Console.WriteLine();
@@ -518,8 +555,7 @@ namespace TestAPILayer.Controllers
             // servers response = Ok   
             var cbor = CBORObject.NewMap().Add("MSG", transactionObj.MSG);
 
-            return Ok(cbor.EncodeToBytes());
-            */
+            return Ok(cbor.EncodeToBytes());           
         }
     }
 }
