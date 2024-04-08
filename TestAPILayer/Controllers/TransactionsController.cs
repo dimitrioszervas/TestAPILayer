@@ -61,7 +61,7 @@ namespace TestAPILayer.Controllers
 
             src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
 
-            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
+            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetREKEYS(src);
 
             byte[][] shards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
@@ -92,7 +92,7 @@ namespace TestAPILayer.Controllers
 
             shards = GetShardsFromCBOR(shardsCBORBytes, ref src, useLogins);
 
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetREKEYS(src);
 
             bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
 
@@ -114,14 +114,14 @@ namespace TestAPILayer.Controllers
             // Decode request's CBOR bytes  
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBOR = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetREKEYS(src);
 
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
+            bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBOR, hmacResultBytes);
 
             Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
@@ -161,10 +161,10 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBOR = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
             //List<byte[]> signs = KeyStore.Inst.GetSIGNS(src);
 
@@ -237,10 +237,10 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBOR = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
             string endPoint = Servers.REGISTER_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
@@ -317,10 +317,10 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBOR = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
             string endPoint = Servers.REKEY_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
@@ -331,7 +331,7 @@ namespace TestAPILayer.Controllers
             }
 
             int shardLength = response.Length / Servers.NUM_SERVERS;
-            List<CBORObject> cbors = new List<CBORObject>();
+            List<CBORObject> responseCBORs = new List<CBORObject>();
                         
             int offset = 0;
             for (int i = 0; i < Servers.NUM_SERVERS; i++)
@@ -339,18 +339,18 @@ namespace TestAPILayer.Controllers
                 byte[] cborShard = new byte[shardLength];
                 Array.Copy(response, offset, cborShard, 0, shardLength);
                 var cborObj = CBORObject.DecodeFromBytes(cborShard);
-                cbors.Add(cborObj);
+                responseCBORs.Add(cborObj);
                 offset += shardLength;
             }
 
-            byte[] wTOKEN = cbors[0]["wTOKEN"].GetByteString();
+            byte[] wTOKEN = responseCBORs[0]["wTOKEN"].GetByteString();
 
             List<byte[]> SE_PUB = new List<byte[]>();
-            SE_PUB.Add(cbors[0]["SE_PUB"].GetByteString());
+            SE_PUB.Add(responseCBORs[0]["SE_PUB"].GetByteString());
 
             for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
-                SE_PUB.Add(cbors[i]["SE_PUB"].GetByteString());
+                SE_PUB.Add(responseCBORs[i]["SE_PUB"].GetByteString());
             } 
 
             //  response is wTOKEN, SE.PUB[] 
@@ -413,14 +413,14 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);           
 
-            // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-            List<byte[]> LOGINS = new List<byte[]>();
+            // servers foreach (n > 0),  store REKEYS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
+            List<byte[]> REKEYS = new List<byte[]>();
             for (int n = 0; n <= Servers.NUM_SERVERS; n++)
             {
                 byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
-                LOGINS.Add(derived);
+                REKEYS.Add(derived);
             }
-            KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
+            KeyStore.Inst.StoreREKEYS(deviceID, REKEYS);
 
             byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);       
 
@@ -454,10 +454,10 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBOR = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
             string endPoint = Servers.LOGIN_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
@@ -488,9 +488,9 @@ namespace TestAPILayer.Controllers
             LoginRequest transactionObj =
                JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
 
-            // servers get LOGINS[] for device
-            // servers SIGNS[] = ENCRYPTS[] = LOGINS[]                
-            List<byte[]> LOGINS = KeyStore.Inst.GetLOGINS(deviceID);
+            // servers get REKEYS[] for device
+            // servers SIGNS[] = ENCRYPTS[] = REKEYS[]                
+            List<byte[]> REKEYS = KeyStore.Inst.GetREKEYS(deviceID);
 
             // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
             List<byte[]> ENCRYPTS = new List<byte[]>();
@@ -539,10 +539,10 @@ namespace TestAPILayer.Controllers
             byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
+            byte[] shardsCBOR = requestCBOR[0].GetByteString();
             byte[] hmacResultBytes = requestCBOR[1].GetByteString();
 
-            byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
+            byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
             string endPoint = Servers.SESSION_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);

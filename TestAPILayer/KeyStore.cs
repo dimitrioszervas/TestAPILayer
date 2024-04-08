@@ -9,7 +9,7 @@ namespace TestAPILayer
         {
             public List<byte[]> ENCRYPTS { get; set; } = new List<byte[]>();
             public List<byte[]> SIGNS { get; set; } = new List<byte[]>();
-            public List<byte[]> LOGINS { get; set; } = new List<byte[]>();           
+            public List<byte[]> REKEYS { get; set; } = new List<byte[]>();           
             public List<byte[]> SE_PRIV { get; set; } = new List<byte[]>();
 
             public byte[] DS_PUB;       
@@ -192,7 +192,7 @@ namespace TestAPILayer
             return _KEYS[srcID].DS_PUB;
         }
 
-        public void StoreLOGINS(byte[] SRC, List<byte[]> LOGINS)
+        public void StoreREKEYS(byte[] SRC, List<byte[]> LOGINS)
         {
             string srcID = ByteArrayToString(SRC);
 
@@ -200,17 +200,17 @@ namespace TestAPILayer
             {
                 _KEYS.TryAdd(srcID, new Keys());
             }
-            _KEYS[srcID].LOGINS.Clear();
+            _KEYS[srcID].REKEYS.Clear();
             for (int i = 0; i < LOGINS.Count; i++)
             {
-                _KEYS[srcID].LOGINS.Add(LOGINS[i]);
+                _KEYS[srcID].REKEYS.Add(LOGINS[i]);
             }
         }
 
-        public List<byte[]> GetLOGINS(byte[] SRC)
+        public List<byte[]> GetREKEYS(byte[] SRC)
         {
             string srcID = ByteArrayToString(SRC);
-            return _KEYS[srcID].LOGINS;
+            return _KEYS[srcID].REKEYS;
         }
 
     }
