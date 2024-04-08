@@ -173,7 +173,7 @@ namespace TestAPILayer.Controllers
             //Console.WriteLine($"CBOR Shard Data Verified: {verified}");
 
 
-            string endPoint = "api/Transactions/Invite";
+            string endPoint = Servers.INVITE_ENDPOINT;
             byte [] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
 
             if (response == null)
@@ -242,7 +242,7 @@ namespace TestAPILayer.Controllers
 
             byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
 
-            string endPoint = "api/Transactions/Register";
+            string endPoint = Servers.REGISTER_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
 
             if (response == null)
@@ -322,23 +322,43 @@ namespace TestAPILayer.Controllers
 
             byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
 
-            string endPoint = "api/Transactions/Rekey";
+            string endPoint = Servers.REKEY_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
-
-            Console.WriteLine($"Size: {response.Length}");
-            Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(response));
 
             if (response == null)
             {
                 return BadRequest("failed to Rekey!");
             }
 
-            string json = Encoding.UTF8.GetString(response);
-            Console.WriteLine(json);
-            var responseCBOR = CBORObject.FromJSONBytes(response);
-            
-            //Console.WriteLine(responseCBOR.ToJSONString());
-            return Ok(responseCBOR.EncodeToBytes());
+            int shardLength = response.Length / Servers.NUM_SERVERS;
+            List<CBORObject> cbors = new List<CBORObject>();
+                        
+            int offset = 0;
+            for (int i = 0; i < Servers.NUM_SERVERS; i++)
+            {
+                byte[] cborShard = new byte[shardLength];
+                Array.Copy(response, offset, cborShard, 0, shardLength);
+                var cborObj = CBORObject.DecodeFromBytes(cborShard);
+                cbors.Add(cborObj);
+                offset += shardLength;
+            }
+
+            byte[] wTOKEN = cbors[0]["wTOKEN"].GetByteString();
+
+            List<byte[]> SE_PUB = new List<byte[]>();
+            SE_PUB.Add(cbors[0]["SE_PUB"].GetByteString());
+
+            for (int i = 0; i < Servers.NUM_SERVERS; i++)
+            {
+                SE_PUB.Add(cbors[i]["SE_PUB"].GetByteString());
+            } 
+
+            //  response is wTOKEN, SE.PUB[] 
+            var cbor = CBORObject.NewMap()
+            .Add("wTOKEN", wTOKEN)
+            .Add("SE_PUB", SE_PUB);
+
+            return Ok(cbor.EncodeToBytes());
             /*
             byte[] requestBytes;
             using (var ms = new MemoryStream())
@@ -439,7 +459,7 @@ namespace TestAPILayer.Controllers
 
             byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
 
-            string endPoint = "api/Transactions/Login";
+            string endPoint = Servers.LOGIN_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
 
             if (response == null)
@@ -524,7 +544,7 @@ namespace TestAPILayer.Controllers
 
             byte[][] shards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src);
 
-            string endPoint = "api/Transactions/Session";
+            string endPoint = Servers.SESSION_ENDPOINT;
             byte[] response = await _clientService.PostTransaction(shards, src, hmacResultBytes, endPoint);
 
             if (response == null)

@@ -13,6 +13,12 @@ namespace TestAPILayer
     {
         public const int NUM_SERVERS = 3;
 
+        public const string INVITE_ENDPOINT = "api/Transactions/Invite";
+        public const string REGISTER_ENDPOINT = "api/Transactions/Register";
+        public const string REKEY_ENDPOINT = "api/Transactions/Rekey";
+        public const string LOGIN_ENDPOINT = "api/Transactions/Login";
+        public const string SESSION_ENDPOINT = "api/Transactions/Session";
+
         // Servers as HTTP clients
         private HttpClient[] HttpClients { get; set; }
 
@@ -188,6 +194,8 @@ namespace TestAPILayer
                 // Send shards packets to Servers
                 Task[] tasks = new Task[shardsPackets.Length];
                 ReceivedShards receivedShards = null;
+                byte[] registerResponse = null;
+                int offset = 0;
 
                 for (int packetNo = 0; packetNo < shardsPackets.Length; packetNo++)
                 {
@@ -211,10 +219,7 @@ namespace TestAPILayer
                             return;
                         }
 
-                        if (endPoint.Equals("api/Transactions/Rekey"))
-                        {
-                            Console.WriteLine($"{jsonResponse}");
-                        }
+                        // Console.WriteLine($"{jsonResponse}");                       
                         if (jsonResponse != null)
                         {
                             ShardsPacket receivedShardPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonResponse);
@@ -224,39 +229,57 @@ namespace TestAPILayer
                                 return;
                             }
 
-                            int shardLength = receivedShardPacket.DataShardLength;
-                            int numTotalShards = receivedShardPacket.NumTotalShards;
-                            int numDataShards = receivedShardPacket.NumDataShards;
-                            int numParityShards = receivedShardPacket.NumParityShards;
-
-                            lock (this)
+                            if (endPoint.Equals(REKEY_ENDPOINT))
                             {
-                                if (receivedShards == null)
+                                if (registerResponse == null)
                                 {
-                                    receivedShards = new ReceivedShards(shardLength,
-                                                                        numTotalShards,
-                                                                        numDataShards,
-                                                                        numParityShards);
-                                }
-                                else
-                                {
-                                    if (receivedShards.AreEnoughShardsReceived())
-                                    {
-                                        return;
-                                    }
+                                    registerResponse = new byte [NUM_SERVERS * receivedShardPacket.DataShards[0].Length];
                                 }
 
-                                for (int shardNo = 0; shardNo < receivedShardPacket.DataShards.Count; shardNo++)
-                                {
-                                    receivedShards.SetShard(receivedShardPacket.ShardNo[shardNo],
-                                                            receivedShardPacket.DataShards[shardNo]);
+                                Array.Copy(receivedShardPacket.DataShards[0],
+                                           0,
+                                           registerResponse,
+                                           offset,
+                                           receivedShardPacket.DataShards[0].Length);
 
-                                    if (receivedShards.AreEnoughShardsReceived())
+                                offset += receivedShardPacket.DataShards[0].Length;
+                            }
+                            else
+                            {
+                                int shardLength = receivedShardPacket.DataShardLength;
+                                int numTotalShards = receivedShardPacket.NumTotalShards;
+                                int numDataShards = receivedShardPacket.NumDataShards;
+                                int numParityShards = receivedShardPacket.NumParityShards;
+
+                                lock (this)
+                                {
+                                    if (receivedShards == null)
                                     {
-                                        Console.WriteLine("Enough shards have been received");
-                                        return;
+                                        receivedShards = new ReceivedShards(shardLength,
+                                                                            numTotalShards,
+                                                                            numDataShards,
+                                                                            numParityShards);
+                                    }
+                                    else
+                                    {
+                                        if (receivedShards.AreEnoughShardsReceived())
+                                        {
+                                            return;
+                                        }
                                     }
 
+                                    for (int shardNo = 0; shardNo < receivedShardPacket.DataShards.Count; shardNo++)
+                                    {
+                                        receivedShards.SetShard(receivedShardPacket.ShardNo[shardNo],
+                                                                receivedShardPacket.DataShards[shardNo]);
+
+                                        if (receivedShards.AreEnoughShardsReceived())
+                                        {
+                                            Console.WriteLine("Enough shards have been received");
+                                            return;
+                                        }
+
+                                    }
                                 }
                             }
                         }
@@ -272,6 +295,11 @@ namespace TestAPILayer
                 foreach (Task task in tasks)
                 {
                     task.Dispose();
+                }
+
+                if (registerResponse != null)
+                {
+                    return registerResponse;
                 }
 
                 if (receivedShards == null)
