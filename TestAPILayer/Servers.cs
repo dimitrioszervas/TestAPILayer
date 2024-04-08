@@ -194,8 +194,7 @@ namespace TestAPILayer
                 // Send shards packets to Servers
                 Task[] tasks = new Task[shardsPackets.Length];
                 ReceivedShards receivedShards = null;
-                byte[] registerResponse = null;
-                int offset = 0;
+                byte[] registerResponse = null;               
 
                 for (int packetNo = 0; packetNo < shardsPackets.Length; packetNo++)
                 {
@@ -236,13 +235,14 @@ namespace TestAPILayer
                                     registerResponse = new byte [NUM_SERVERS * receivedShardPacket.DataShards[0].Length];
                                 }
 
+                                int offset = receivedShardPacket.DataShards[0].Length * receivedShardPacket.ShardNo[0];
+                                
                                 Array.Copy(receivedShardPacket.DataShards[0],
                                            0,
                                            registerResponse,
                                            offset,
                                            receivedShardPacket.DataShards[0].Length);
 
-                                offset += receivedShardPacket.DataShards[0].Length;
                             }
                             else
                             {

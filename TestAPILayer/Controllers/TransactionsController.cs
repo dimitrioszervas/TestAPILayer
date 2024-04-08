@@ -350,7 +350,7 @@ namespace TestAPILayer.Controllers
 
             for (int i = 0; i < Servers.NUM_SERVERS; i++)
             {
-                SE_PUB.Add(responseCBORs[i]["SE_PUB"].GetByteString());
+                SE_PUB.Add(responseCBORs[i]["SE_PUB"].GetByteString());                
             } 
 
             //  response is wTOKEN, SE.PUB[] 
