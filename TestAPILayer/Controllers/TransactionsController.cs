@@ -343,7 +343,15 @@ namespace TestAPILayer.Controllers
                 offset += shardLength;
             }
 
+            // check if wTOKEN received is the same from all 3 Servers
             byte[] wTOKEN = responseCBORs[0]["wTOKEN"].GetByteString();
+            for (int i = 1; i < responseCBORs.Count; i++)
+            {
+                if (!wTOKEN.SequenceEqual(responseCBORs[0]["wTOKEN"].GetByteString()))
+                {
+                    return BadRequest("failed to Rekey!");
+                }
+            }
 
             List<byte[]> SE_PUB = new List<byte[]>();
             SE_PUB.Add(responseCBORs[0]["SE_PUB"].GetByteString());
