@@ -61,7 +61,7 @@ namespace TestAPILayer.Controllers
 
             src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
 
-            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetREKEYS(src);
+            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetPreKEYS(src);
 
             byte[][] shards = new byte[numShards][];
             for (int i = 0; i < numShards; i++)
@@ -92,7 +92,7 @@ namespace TestAPILayer.Controllers
 
             shards = GetShardsFromCBOR(shardsCBORBytes, ref src, useLogins);
 
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetREKEYS(src);
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetPreKEYS(src);
 
             bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBORBytes, hmacResultBytes);
 
@@ -119,7 +119,7 @@ namespace TestAPILayer.Controllers
 
             byte[][] shards = GetShardsFromCBOR(shardsCBOR, ref src);
 
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetREKEYS(src);
+            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetPreKEYS(src);
 
             bool verified = CryptoUtils.HashIsValid(signs[0], shardsCBOR, hmacResultBytes);
 
@@ -421,14 +421,14 @@ namespace TestAPILayer.Controllers
             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
             KeyStore.Inst.StoreNONCE(deviceID, NONCE);           
 
-            // servers foreach (n > 0),  store REKEYS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-            List<byte[]> REKEYS = new List<byte[]>();
+            // servers foreach (n > 0),  store preKEYS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
+            List<byte[]> preKEYS = new List<byte[]>();
             for (int n = 0; n <= Servers.NUM_SERVERS; n++)
             {
                 byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
-                REKEYS.Add(derived);
+                preKEYS.Add(derived);
             }
-            KeyStore.Inst.StoreREKEYS(deviceID, REKEYS);
+            KeyStore.Inst.StorePreKEYS(deviceID, preKEYS);
 
             byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);       
 
@@ -496,9 +496,9 @@ namespace TestAPILayer.Controllers
             LoginRequest transactionObj =
                JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
 
-            // servers get REKEYS[] for device
-            // servers SIGNS[] = ENCRYPTS[] = REKEYS[]                
-            List<byte[]> REKEYS = KeyStore.Inst.GetREKEYS(deviceID);
+            // servers get preKEYS[] for device
+            // servers SIGNS[] = ENCRYPTS[] = preKEYS[]                
+            List<byte[]> preKEYS = KeyStore.Inst.GetPreKEYS(deviceID);
 
             // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
             List<byte[]> ENCRYPTS = new List<byte[]>();
