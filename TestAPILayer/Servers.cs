@@ -206,11 +206,9 @@ namespace TestAPILayer
                     {
                         string jsonResponse = null;
                         try
-                        {
-                            byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
-                            var packetCBOR = CBORObject.NewArray().Add(packetBytes);
-
-                            jsonResponse = await PostAsync(client, packetCBOR.EncodeToBytes(), endPoint);
+                        {                            
+                            byte[] packetCBORBytes = shardsPacket.EncodeToCBORBytes();
+                            jsonResponse = await PostAsync(client, packetCBORBytes, endPoint);
                         }
                         catch (Exception ex)
                         {
